@@ -1,0 +1,61 @@
+# MarkView App Icon 設計邏輯
+
+> **資產來源聲明 / Asset provenance**:本專案的 app icon(`Resources/AppIcon.png`
+> 及由其產生的 `AppIcon.icns`)為 **AI 生成的原創圖像資產**,依本文件的設計
+> brief 產出,並經人工檢查確認不近似任何既有商標(見第 8 節原創性檢查清單)。
+> The app icon is an AI-generated original asset produced from the design brief
+> in this document and manually reviewed for trademark originality.
+
+## 1. 設計目標
+- 讓 icon 一眼傳達「這是一個 Markdown 檢視工具」。
+- 借用 Notepad++ 的精神概念（致敬），但**不得照抄**其視覺、造型或商標。
+- 融入使用者的 macOS Dock，與周邊 flat icon 協調。
+- 小尺寸（16–32px）仍可辨識，silhouette 要夠強。
+
+## 2. Notepad++ 參考解構
+Notepad++ 的識別核心拆成三個可借用的「概念元件」：
+- 綠色主色調
+- 一隻爬蟲類吉祥物（變色龍）
+- 「文字／編輯器」的隱喻
+
+策略：**保留概念層（動物吉祥物 + 文件隱喻 + 綠色起點），重造表現層**（不同動物語彙、不同造型、不同構圖），以避免商標近似。
+
+## 3. 致敬但不照抄原則（Anti-Infringement）
+- 不使用變色龍造型（無舌頭、無捲尾等變色龍專屬特徵）。
+- 不複製 Notepad++ 的 logo 形狀、配色比例或版式。
+- 生物改為「抽象幾何拼塊」風格，屬原創設計。
+- 每次生成都要求 commercially safe、不近似任何既有商標。
+
+## 4. 四個設計決策軸（與使用者確認）
+| 決策軸 | 選項 | 定案 |
+|---|---|---|
+| 吉祥物 | 換一種爬蟲 / 抽象幾何生物 / 不要動物 | 抽象幾何生物 |
+| Markdown 元素 | 放 MD 記號 / 純吉祥物 | 放 `M↓` 角標 |
+| 配色 | 綠色系（致敬改調）/ 藍紫科技 / 多色 | 先綠後改藍（見迭代） |
+| 風格 | macOS 擬物 / 扁平極簡 / 3D | 最終扁平化 |
+
+## 5. 迭代歷程
+1. **V1 擬物綠**：深黑底 + 玻璃高光 + 低多邊形綠色生物 + `M↓`。問題：放進 Dock 太突兀，與 flat icon 不協調。
+2. **V2 扁平綠**：去玻璃／去深黑底，改淺綠底 flat 色塊、簡化造型。問題：色調（使用者要藍）、要去背。
+3. **V3 扁平透明藍（定案）**：主色改藍色系；PNG 帶 alpha（方塊外圍透明）；保留淺藍 squircle 底（使用者選擇保留底，因無底會降低小尺寸辨識度）。
+
+## 6. 設計元素定義（定案版）
+- **主體**：抽象幾何拼塊組成的生物側臉。
+- **角標**：右下 `M↓`（Markdown 記號），輕量、融入不搶主體。
+- **主色**：藍色系 flat 色塊。
+- **外形**：macOS squircle 圓角方磚。
+- **背景**：淺藍 squircle 底 + 外圍透明（RGBA）。
+
+## 7. 技術產製流程
+1. AI 生成 1024×1024 圖稿（依上述 brief）。
+2. 必要時去背／調色，確保存成**真正含 alpha 的 PNG**（注意 CDN 有時 `.png` 實為 JPEG，需 `sips -s format png` 強制轉換）。
+3. `sips` 產出 iconset（16/32/128/256/512 各 @1x/@2x）。
+4. `iconutil -c icns AppIcon.iconset -o AppIcon.icns`。
+5. 放進 `Resources/`，`Info.plist` 設 `CFBundleIconFile`／`CFBundleIconName = AppIcon`。
+6. `install.sh` 複製 `.icns` 進 app bundle 並刷新 icon cache。
+
+## 8. 原創性檢查清單
+- [ ] 非變色龍造型，無變色龍專屬特徵。
+- [ ] 不近似 Notepad++ logo 的形狀／配色比例／版式。
+- [ ] 生物為原創抽象設計。
+- [ ] 圖稿 commercially safe。
