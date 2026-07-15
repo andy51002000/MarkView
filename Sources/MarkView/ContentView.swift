@@ -42,15 +42,6 @@ struct ContentView: View {
             }
             .disabled(store.rawText.isEmpty)
 
-            if !store.allowsRemoteImages {
-                Button {
-                    store.allowRemoteImages()
-                } label: {
-                    Label("Load Remote Images", systemImage: "network")
-                }
-                .disabled(store.fileURL == nil)
-            }
-
             Spacer()
 
             Text(store.fileName.isEmpty ? "No file" : store.fileName)
@@ -71,11 +62,7 @@ struct ContentView: View {
                        subtitle: "⌘O — supports .md and .markdown")
         } else {
             ScrollView {
-                MarkdownView(
-                    blocks: store.blocks,
-                    baseURL: store.baseURL,
-                    allowsRemoteImages: store.allowsRemoteImages
-                )
+                MarkdownView(blocks: store.blocks, baseURL: store.baseURL)
                     .padding(24)
                     .frame(maxWidth: 760, alignment: .leading)
                     .frame(maxWidth: .infinity, alignment: .center)

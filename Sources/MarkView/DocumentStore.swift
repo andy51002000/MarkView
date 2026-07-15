@@ -12,7 +12,6 @@ final class DocumentStore: ObservableObject {
     @Published var baseURL: URL?
     @Published var fileURL: URL?
     @Published var blocks: [MarkdownBlock] = []
-    @Published var allowsRemoteImages = false
 
     private static let allowedExtensions: Set<String> = ["md", "markdown", "mdown", "txt"]
     private var activeLoadID = UUID()
@@ -50,11 +49,6 @@ final class DocumentStore: ObservableObject {
     func reload() {
         guard let fileURL else { return }
         loadDocument(at: fileURL, startWatchingOnSuccess: false)
-    }
-
-    func allowRemoteImages() {
-        guard fileURL != nil else { return }
-        allowsRemoteImages = true
     }
 
     private func loadDocument(at url: URL, startWatchingOnSuccess: Bool) {
@@ -119,7 +113,6 @@ final class DocumentStore: ObservableObject {
         baseURL = nil
         fileURL = nil
         blocks = []
-        allowsRemoteImages = false
         errorMessage = nil
     }
 

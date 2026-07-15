@@ -11,45 +11,46 @@ import Testing
 
     @Test func fileSchemeIsRejected() throws {
         let result = ImageSourceResolver.resolve(
-            "file:///etc/hosts", relativeTo: baseURL, allowsRemoteImages: true)
+            "file:///etc/hosts", relativeTo: baseURL)
         guard case .rejected = result else {
             Issue.record("file:// sources must be rejected, got \(result)")
             return
         }
     }
 
-    @Test func httpIsRejectedEvenWhenRemoteAllowed() throws {
+    @Test func httpIsAlwaysRejected() throws {
         let result = ImageSourceResolver.resolve(
-            "http://example.com/a.png", relativeTo: baseURL, allowsRemoteImages: true)
+            "http://example.com/a.png", relativeTo: baseURL)
         guard case .rejected = result else {
             Issue.record("Plain HTTP must never be loaded, got \(result)")
             return
         }
     }
 
-    @Test func httpsBlockedByDefault() throws {
+    @Test func httpsIsAllowedByDefault() throws {
         let result = ImageSourceResolver.resolve(
-            "https://example.com/a.png", relativeTo: baseURL, allowsRemoteImages: false)
-        guard case .rejected = result else {
-            Issue.record("Remote images must be blocked by default, got \(result)")
-            return
-        }
-    }
-
-    @Test func httpsAllowedWhenOptedIn() throws {
-        let result = ImageSourceResolver.resolve(
-            "https://example.com/a.png", relativeTo: baseURL, allowsRemoteImages: true)
+            "https://example.com/a.png", relativeTo: baseURL)
         guard case .remote(let url) = result else {
-            Issue.record("Expected an approved remote URL, got \(result)")
+            Issue.record("Expected an automatically approved HTTPS URL, got \(result)")
             return
         }
         #expect(url.scheme == "https")
         #expect(url.host == "example.com")
     }
 
+    @Test func httpsURLWithCJKAndSpaceIsPercentEncoded() throws {
+        let result = ImageSourceResolver.resolve(
+            "https://example.com/圖片 1.png", relativeTo: baseURL)
+        guard case .remote(let url) = result else {
+            Issue.record("Expected an encoded HTTPS URL, got \(result)")
+            return
+        }
+        #expect(url.absoluteString.contains("%E5%9C%96%E7%89%87%201.png"))
+    }
+
     @Test func absolutePathIsRejected() throws {
         let result = ImageSourceResolver.resolve(
-            "/etc/hosts", relativeTo: baseURL, allowsRemoteImages: false)
+            "/etc/hosts", relativeTo: baseURL)
         guard case .rejected = result else {
             Issue.record("Absolute paths must be rejected, got \(result)")
             return
@@ -58,7 +59,7 @@ import Testing
 
     @Test func parentTraversalIsRejected() throws {
         let result = ImageSourceResolver.resolve(
-            "../outside/secret.png", relativeTo: baseURL, allowsRemoteImages: false)
+            "../outside/secret.png", relativeTo: baseURL)
         guard case .rejected = result else {
             Issue.record("../ traversal outside the document directory must be rejected, got \(result)")
             return
@@ -67,7 +68,7 @@ import Testing
 
     @Test func nestedTraversalEscapingBaseIsRejected() throws {
         let result = ImageSourceResolver.resolve(
-            "assets/../../secret.png", relativeTo: baseURL, allowsRemoteImages: false)
+            "assets/../../secret.png", relativeTo: baseURL)
         guard case .rejected = result else {
             Issue.record("Traversal that resolves outside the base must be rejected, got \(result)")
             return
@@ -76,7 +77,7 @@ import Testing
 
     @Test func relativePathInsideBaseIsAccepted() throws {
         let result = ImageSourceResolver.resolve(
-            "assets/logo.png", relativeTo: baseURL, allowsRemoteImages: false)
+            "assets/logo.png", relativeTo: baseURL)
         guard case .local(let url) = result else {
             Issue.record("Expected a resolved local URL, got \(result)")
             return
@@ -86,7 +87,7 @@ import Testing
 
     @Test func traversalThatStaysInsideBaseIsAccepted() throws {
         let result = ImageSourceResolver.resolve(
-            "assets/../logo.png", relativeTo: baseURL, allowsRemoteImages: false)
+            "assets/../logo.png", relativeTo: baseURL)
         guard case .local(let url) = result else {
             Issue.record("In-base traversal should resolve to a local URL, got \(result)")
             return

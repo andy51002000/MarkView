@@ -53,7 +53,7 @@ Local image (resolved relative to this file):
 
 ![MarkView logo](assets/logo.png)
 
-Remote image (loads after choosing Load Remote Images):
+Remote HTTPS image (loads automatically):
 
 ![Swift logo](https://www.swift.org/apple-touch-icon.png)
 

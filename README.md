@@ -13,7 +13,7 @@ A fast, lightweight, **native macOS Markdown viewer** built with SwiftUI — no 
   - Fenced code blocks (```` ``` ````) with language label
   - Blockquotes
   - GitHub-style pipe tables (header separator, uneven rows handled)
-  - Images via `![alt](src)` — local paths resolve relative to the opened file; remote `http(s)` images load asynchronously; missing images show a fallback
+  - Images via `![alt](src)` — contained local paths and remote HTTPS images load automatically; unsafe or missing images show a fallback
   - Horizontal rules
 - Manual reload with `⌘R` plus automatic refresh when the open file changes externally, including atomic saves
 - Text selection enabled
@@ -97,11 +97,10 @@ Samples/SAMPLE.md        # demo document exercising all features
 
 ## Privacy & security model for images
 
-- **Remote images are blocked by default.** Nothing is fetched from the network
-  until you explicitly click **Load Remote Images** for the current document,
-  and the opt-in resets whenever a new file is opened.
-- **HTTPS only.** Even after opting in, plain `http://` image URLs are never
-  loaded. `file://` and every other scheme are always rejected.
+- **Remote HTTPS images load automatically.** Opening an untrusted document can
+  contact image hosts referenced by that document.
+- **HTTPS only.** Plain `http://` image URLs are never loaded. `file://` and
+  every other scheme are always rejected.
 - **Local images are sandboxed to the document folder.** Relative paths are
   resolved against the opened file's directory; absolute paths and `../`
   traversal that escapes that directory are rejected (symlinks are resolved
@@ -111,7 +110,7 @@ Samples/SAMPLE.md        # demo document exercising all features
 
 - The block parser is intentionally minimal (MVP scope): nested lists are not yet rendered. Inline emphasis/links use SwiftUI's native `AttributedString(markdown:)`.
 - Tables use GitHub pipe syntax and require the `| --- |` separator row under the header.
-- Remote images are blocked by default. Use **Load Remote Images** for the current document to allow HTTPS images; HTTP is never loaded. Local images must use paths that remain inside the opened `.md` file's directory.
+- Remote HTTPS images load automatically; HTTP is never loaded. Local images must use paths that remain inside the opened `.md` file's directory.
 - To make a double-clickable `.app`, wrap the release binary in an app bundle (future enhancement); for the MVP, `swift run` is the fastest path.
 
 ## Contributing

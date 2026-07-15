@@ -3,7 +3,6 @@ import SwiftUI
 struct MarkdownView: View {
     let blocks: [MarkdownBlock]
     var baseURL: URL? = nil
-    var allowsRemoteImages = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -95,12 +94,7 @@ struct MarkdownView: View {
             TableBlockView(headers: headers, rows: rows)
 
         case .image(_, let alt, let source):
-            ImageBlockView(
-                alt: alt,
-                source: source,
-                baseURL: baseURL,
-                allowsRemoteImages: allowsRemoteImages
-            )
+            ImageBlockView(alt: alt, source: source, baseURL: baseURL)
 
         case .thematicBreak:
             Divider()

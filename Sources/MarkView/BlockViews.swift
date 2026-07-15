@@ -165,8 +165,7 @@ enum ImageSourceResolution: Equatable {
 enum ImageSourceResolver {
     static func resolve(
         _ source: String,
-        relativeTo baseURL: URL?,
-        allowsRemoteImages: Bool
+        relativeTo baseURL: URL?
     ) -> ImageSourceResolution {
         let trimmed = source.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
@@ -176,9 +175,6 @@ enum ImageSourceResolver {
         if let scheme = URLComponents(string: trimmed)?.scheme {
             guard scheme.lowercased() == "https" else {
                 return .rejected("Only HTTPS remote images are allowed")
-            }
-            guard allowsRemoteImages else {
-                return .rejected("Remote image blocked — use Load Remote Images to allow it")
             }
             guard let encoded = trimmed.addingPercentEncoding(withAllowedCharacters: .urlFragmentAllowed),
                   let url = URL(string: encoded),
@@ -213,7 +209,6 @@ struct ImageBlockView: View {
     let alt: String
     let source: String
     let baseURL: URL?
-    let allowsRemoteImages: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -228,11 +223,7 @@ struct ImageBlockView: View {
 
     @ViewBuilder
     private var imageContent: some View {
-        switch ImageSourceResolver.resolve(
-            source,
-            relativeTo: baseURL,
-            allowsRemoteImages: allowsRemoteImages
-        ) {
+        switch ImageSourceResolver.resolve(source, relativeTo: baseURL) {
         case .local(let url):
             if let nsImage = NSImage(contentsOf: url) {
                 Image(nsImage: nsImage)
