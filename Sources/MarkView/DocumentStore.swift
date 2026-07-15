@@ -15,8 +15,8 @@ final class DocumentStore: ObservableObject {
     @Published var allowsRemoteImages = false
 
     private static let allowedExtensions: Set<String> = ["md", "markdown", "mdown", "txt"]
-    nonisolated private static let maximumFileSize = 10 * 1_024 * 1_024
     private var activeLoadID = UUID()
+    private var fileWatcher: FileWatcher?
 
     func openWithPanel() {
         let panel = NSOpenPanel()
@@ -36,8 +36,7 @@ final class DocumentStore: ObservableObject {
     }
 
     func load(url: URL) {
-        let loadID = UUID()
-        activeLoadID = loadID
+        stopWatching()
         clearDocument()
 
         let ext = url.pathExtension.lowercased()
@@ -45,11 +44,12 @@ final class DocumentStore: ObservableObject {
             errorMessage = "Unsupported file type: .\(ext). Choose a .md or .markdown file."
             return
         }
+        loadDocument(at: url.standardizedFileURL, startWatchingOnSuccess: true)
+    }
 
-        Task.detached(priority: .userInitiated) { [weak self] in
-            let result = Self.readAndParse(url: url)
-            await self?.finishLoading(result, url: url, loadID: loadID)
-        }
+    func reload() {
+        guard let fileURL else { return }
+        loadDocument(at: fileURL, startWatchingOnSuccess: false)
     }
 
     func allowRemoteImages() {
@@ -57,24 +57,60 @@ final class DocumentStore: ObservableObject {
         allowsRemoteImages = true
     }
 
+    private func loadDocument(at url: URL, startWatchingOnSuccess: Bool) {
+        let loadID = UUID()
+        activeLoadID = loadID
+        Task.detached(priority: .userInitiated) { [weak self] in
+            let result = Result { try DocumentLoader.load(url: url) }
+            await self?.finishLoading(
+                result,
+                url: url,
+                loadID: loadID,
+                startWatchingOnSuccess: startWatchingOnSuccess
+            )
+        }
+    }
+
     private func finishLoading(
-        _ result: Result<(String, [MarkdownBlock]), Error>,
+        _ result: Result<LoadedDocument, Error>,
         url: URL,
-        loadID: UUID
+        loadID: UUID,
+        startWatchingOnSuccess: Bool
     ) {
         guard activeLoadID == loadID else { return }
         switch result {
-        case .success(let (text, parsedBlocks)):
-            rawText = text
+        case .success(let document):
+            rawText = document.text
             fileName = url.lastPathComponent
             baseURL = url.deletingLastPathComponent().standardizedFileURL
             fileURL = url
-            blocks = parsedBlocks
+            blocks = document.blocks
             errorMessage = nil
+            if startWatchingOnSuccess || fileWatcher == nil {
+                startWatching(url: url)
+            }
         case .failure(let error):
+            stopWatching()
             clearDocument()
             errorMessage = "Failed to open \(url.lastPathComponent): \(error.localizedDescription)"
         }
+    }
+
+    private func startWatching(url: URL) {
+        stopWatching()
+        let watcher = FileWatcher(url: url) { [weak self] in
+            Task { @MainActor in
+                guard self?.fileURL == url else { return }
+                self?.reload()
+            }
+        }
+        fileWatcher = watcher
+        watcher.start()
+    }
+
+    private func stopWatching() {
+        fileWatcher?.stop()
+        fileWatcher = nil
     }
 
     private func clearDocument() {
@@ -85,58 +121,6 @@ final class DocumentStore: ObservableObject {
         blocks = []
         allowsRemoteImages = false
         errorMessage = nil
-    }
-
-    nonisolated private static func readAndParse(
-        url: URL
-    ) -> Result<(String, [MarkdownBlock]), Error> {
-        Result {
-            let values = try url.resourceValues(forKeys: [.fileSizeKey])
-            if let fileSize = values.fileSize, fileSize > maximumFileSize {
-                throw DocumentLoadError.fileTooLarge(fileSize)
-            }
-
-            let data = try Data(contentsOf: url, options: .mappedIfSafe)
-            guard data.count <= maximumFileSize else {
-                throw DocumentLoadError.fileTooLarge(data.count)
-            }
-            guard let text = decode(data) else {
-                throw DocumentLoadError.unsupportedEncoding
-            }
-            return (text, MarkdownParser.parse(text))
-        }
-    }
-
-    nonisolated private static func decode(_ data: Data) -> String? {
-        let encodings: [String.Encoding] = [
-            .utf8,
-            .utf16,
-            .utf16LittleEndian,
-            .utf16BigEndian,
-            .windowsCP1252,
-            .macOSRoman,
-            .isoLatin1
-        ]
-        for encoding in encodings {
-            if let text = String(data: data, encoding: encoding) {
-                return text
-            }
-        }
-        return nil
-    }
-
-    private enum DocumentLoadError: LocalizedError {
-        case fileTooLarge(Int)
-        case unsupportedEncoding
-
-        var errorDescription: String? {
-            switch self {
-            case .fileTooLarge(let bytes):
-                return "File is \(ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file)); the limit is 10 MB."
-            case .unsupportedEncoding:
-                return "The file uses an unsupported text encoding."
-            }
-        }
     }
 
     func copyPath() {

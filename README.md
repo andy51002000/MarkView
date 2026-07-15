@@ -15,6 +15,7 @@ A fast, lightweight, **native macOS Markdown viewer** built with SwiftUI — no 
   - GitHub-style pipe tables (header separator, uneven rows handled)
   - Images via `![alt](src)` — local paths resolve relative to the opened file; remote `http(s)` images load asynchronously; missing images show a fallback
   - Horizontal rules
+- Manual reload with `⌘R` plus automatic refresh when the open file changes externally, including atomic saves
 - Text selection enabled
 - Zero third-party dependencies (pure SwiftPM + SwiftUI)
 
@@ -84,7 +85,9 @@ Package.swift
 Sources/MarkView/
   MarkViewApp.swift      # @main app entry point + menu commands
   ContentView.swift      # window layout, toolbar, empty states
-  DocumentStore.swift    # file open (NSOpenPanel) + loading
+  DocumentStore.swift    # file open, reload state, and monitoring lifecycle
+  DocumentLoader.swift   # size-limited background-safe file loading
+  FileWatcher.swift      # debounced file and directory change monitoring
   MarkdownParser.swift   # dependency-free block parser
   MarkdownView.swift     # SwiftUI block renderer (uses AttributedString for inline)
   BlockViews.swift       # table/image block views + image source security

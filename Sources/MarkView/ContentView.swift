@@ -21,6 +21,14 @@ struct ContentView: View {
             .keyboardShortcut("o", modifiers: [.command])
 
             Button {
+                store.reload()
+            } label: {
+                Label("Reload", systemImage: "arrow.clockwise")
+            }
+            .keyboardShortcut("r", modifiers: [.command])
+            .disabled(store.fileURL == nil)
+
+            Button {
                 store.copyPath()
             } label: {
                 Label("Get Path", systemImage: "doc.on.clipboard")
