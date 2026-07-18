@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MarkView — Lightweight Native macOS Markdown Viewer (~400 KB, Free &amp; Open Source)</title>
+<meta name="description" content="MarkView is a free, open-source, native macOS Markdown viewer. ~400 KB instead of hundreds of MB, instant launch, GitHub tables, Quick Look previews, and a strict image-privacy model. No Electron. No dependencies.">
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<link rel="canonical" href="https://andy51002000.github.io/MarkView/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="MarkView — Lightweight Native macOS Markdown Viewer">
+<meta property="og:description" content="Free, open-source, ~400 KB native Markdown viewer for macOS. Instant launch, GFM tables, Quick Look previews, strict image privacy. No Electron.">
+<meta property="og:url" content="https://andy51002000.github.io/MarkView/">
+<meta property="og:image" content="https://andy51002000.github.io/MarkView/assets/appicon.png">
+<meta name="twitter:card" content="summary">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "MarkView",
+  "operatingSystem": "macOS 13+",
+  "applicationCategory": "UtilitiesApplication",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "license": "https://opensource.org/licenses/MIT",
+  "url": "https://andy51002000.github.io/MarkView/",
+  "downloadUrl": "https://github.com/andy51002000/MarkView",
+  "description": "Free, open-source, native macOS Markdown viewer. Roughly 400 KB, instant launch, GitHub-style tables, Quick Look previews, and a strict image-privacy model."
+}
+</script>
+<style>
+:root {
+  --bg: #fafaf8;
+  --bg-alt: #f0f0ec;
+  --fg: #23272a;
+  --fg-soft: #5b6167;
+  --accent: #2aa79b;
+  --accent-deep: #1d7d74;
+  --card: #ffffff;
+  --border: #e2e2dd;
+  --code-bg: #ecece8;
+  --shadow: 0 1px 3px rgba(30, 40, 40, .08), 0 8px 24px rgba(30, 40, 40, .06);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1b1e20;
+    --bg-alt: #212528;
+    --fg: #e8e8e4;
+    --fg-soft: #a3aab0;
+    --accent: #3fbfb2;
+    --accent-deep: #63d4c8;
+    --card: #24282b;
+    --border: #33383c;
+    --code-bg: #2b3034;
+    --shadow: 0 1px 3px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .3);
+  }
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+a { color: var(--accent-deep); }
+h2 { font-size: 1.7rem; letter-spacing: -.01em; margin-bottom: .4em; }
+h3 { font-size: 1.05rem; margin-bottom: .3em; }
+section { padding: 64px 0; }
+section:nth-of-type(even) { background: var(--bg-alt); }
+.kicker {
+  color: var(--accent);
+  font-size: .8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  margin-bottom: .6em;
+}
+code, pre {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: .88em;
+  background: var(--code-bg);
+  border-radius: 6px;
+}
+code { padding: .15em .4em; }
+pre {
+  padding: 16px 20px;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  line-height: 1.5;
+}
+pre code { background: none; padding: 0; }
+
+/* Hero */
+.hero { padding: 88px 0 72px; text-align: center; }
+.hero img.icon {
+  width: 112px; height: 112px;
+  border-radius: 26px;
+  box-shadow: var(--shadow);
+  margin-bottom: 28px;
+}
+.hero h1 {
+  font-size: clamp(2rem, 5vw, 3.1rem);
+  line-height: 1.12;
+  letter-spacing: -.02em;
+  margin-bottom: .45em;
+}
+.hero h1 em { font-style: normal; color: var(--accent); }
+.hero .sub {
+  font-size: 1.18rem;
+  color: var(--fg-soft);
+  max-width: 620px;
+  margin: 0 auto 36px;
+}
+.cta-row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+.btn {
+  display: inline-block;
+  padding: 13px 26px;
+  border-radius: 10px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.btn:hover { transform: translateY(-1px); }
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: var(--shadow);
+}
+.btn-secondary {
+  border: 1.5px solid var(--border);
+  color: var(--fg);
+  background: var(--card);
+}
+.hero .stats {
+  display: flex; gap: 34px; justify-content: center; flex-wrap: wrap;
+  margin-top: 44px;
+}
+.hero .stat b { display: block; font-size: 1.5rem; color: var(--accent-deep); }
+.hero .stat span { font-size: .85rem; color: var(--fg-soft); }
+
+/* Cards */
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; margin-top: 30px; }
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 22px 24px;
+}
+.card .emoji { font-size: 1.5rem; display: block; margin-bottom: 10px; }
+.card p { color: var(--fg-soft); font-size: .95rem; }
+
+/* Compare table */
+table { width: 100%; border-collapse: collapse; margin-top: 26px; background: var(--card); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); }
+th, td { padding: 13px 18px; text-align: left; border-bottom: 1px solid var(--border); }
+th { background: var(--code-bg); font-size: .85rem; text-transform: uppercase; letter-spacing: .05em; }
+tr:last-child td { border-bottom: none; }
+td.good { color: var(--accent-deep); font-weight: 600; }
+.note { font-size: .82rem; color: var(--fg-soft); margin-top: 12px; }
+
+/* Security list */
+.sec-list { list-style: none; margin-top: 26px; }
+.sec-list li {
+  padding: 14px 0 14px 36px;
+  position: relative;
+  border-bottom: 1px solid var(--border);
+}
+.sec-list li:last-child { border-bottom: none; }
+.sec-list li::before {
+  content: "✓";
+  position: absolute; left: 4px;
+  color: var(--accent);
+  font-weight: 700;
+}
+.sec-list b { display: block; }
+.sec-list span { color: var(--fg-soft); font-size: .93rem; }
+
+/* Install */
+.install-steps { counter-reset: step; margin-top: 26px; }
+.install-steps .step { display: flex; gap: 16px; margin-bottom: 22px; align-items: flex-start; }
+.install-steps .n {
+  counter-increment: step;
+  flex: 0 0 30px; height: 30px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .9rem;
+  margin-top: 2px;
+}
+.install-steps .n::before { content: counter(step); }
+.install-steps pre { margin-top: 8px; }
+
+footer {
+  padding: 44px 0 56px;
+  text-align: center;
+  color: var(--fg-soft);
+  font-size: .88rem;
+  border-top: 1px solid var(--border);
+}
+footer a { color: var(--fg-soft); }
+</style>
+</head>
+<body>
+
+<header class="hero wrap">
+  <img class="icon" src="assets/appicon.png" alt="MarkView app icon" width="112" height="112">
+  <h1>Read Markdown the way<br>your Mac <em>wants to</em>.</h1>
+  <p class="sub">MarkView is a free, open-source, <strong>native macOS Markdown viewer</strong>.
+  Instant launch, beautiful rendering, and a footprint measured in kilobytes — not hundreds of megabytes.</p>
+  <div class="cta-row">
+    <a class="btn btn-primary" href="https://github.com/andy51002000/MarkView">Get MarkView on GitHub</a>
+    <a class="btn btn-secondary" href="#install">Install in 60 seconds</a>
+  </div>
+  <div class="stats">
+    <div class="stat"><b>~400 KB</b><span>release binary</span></div>
+    <div class="stat"><b>~0.4 s</b><span>to parse a 5 MB document</span></div>
+    <div class="stat"><b>0</b><span>third-party dependencies</span></div>
+    <div class="stat"><b>MIT</b><span>free &amp; open source</span></div>
+  </div>
+</header>
+
+<section id="features">
+  <div class="wrap">
+    <div class="kicker">Features</div>
+    <h2>Everything a viewer should do. Nothing it shouldn't.</h2>
+    <div class="grid">
+      <div class="card"><span class="emoji">📄</span><h3>Full GitHub-flavored rendering</h3>
+        <p>Pipe tables, nested lists, task lists, fenced code blocks, blockquotes, inline images, links — rendered natively with SwiftUI.</p></div>
+      <div class="card"><span class="emoji">🔄</span><h3>Live auto-reload</h3>
+        <p>Edit in your favorite editor, save, and the preview updates by itself — atomic saves from VS Code and friends included. ⌘R any time.</p></div>
+      <div class="card"><span class="emoji">👁</span><h3>Quick Look previews</h3>
+        <p>Select a .md file in Finder and press Space: rendered Markdown, not plain text. No app launch needed.</p></div>
+      <div class="card"><span class="emoji">⚡️</span><h3>Handles huge files</h3>
+        <p>A 5 MB / 115,000-block document parses in ~0.4 s in the background — the UI never freezes, scrolling stays smooth.</p></div>
+      <div class="card"><span class="emoji">📋</span><h3>Handy utilities</h3>
+        <p>Copy the file path or the whole Markdown source with one click. Set MarkView as the default opener for .md files.</p></div>
+      <div class="card"><span class="emoji">🍎</span><h3>Feels like a Mac app</h3>
+        <p>Because it is one. Pure SwiftPM + SwiftUI, dark &amp; light mode, text selection, native scrolling. No web view pretending.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="lightweight">
+  <div class="wrap">
+    <div class="kicker">Why so small?</div>
+    <h2>Kilobytes, not hundreds of megabytes.</h2>
+    <p style="color:var(--fg-soft); max-width:640px">Most Markdown tools ship an entire browser to draw text.
+    MarkView renders with the frameworks already on your Mac — so the whole app is about the size of a single photo.</p>
+    <table>
+      <thead><tr><th>App</th><th>Approx. install size*</th><th>Engine</th></tr></thead>
+      <tbody>
+        <tr><td><strong>MarkView</strong></td><td class="good">~400 KB</td><td>Native SwiftUI</td></tr>
+        <tr><td>Obsidian</td><td>~213 MB</td><td>Electron</td></tr>
+        <tr><td>VS Code</td><td>~500 MB</td><td>Electron</td></tr>
+      </tbody>
+    </table>
+    <p class="note">*Approximate sizes as of mid-2026; measured on Apple Silicon / vendor download pages. Obsidian and VS Code are excellent <em>editors</em> — MarkView is for when you just want to <em>read</em>.</p>
+  </div>
+</section>
+
+<section id="security">
+  <div class="wrap">
+    <div class="kicker">Privacy &amp; security</div>
+    <h2>Opening a file shouldn't be a leap of faith.</h2>
+    <ul class="sec-list">
+      <li><b>HTTPS-only remote images</b><span>Plain http:// image URLs are never fetched. file:// and other schemes are always rejected.</span></li>
+      <li><b>Local images stay in the document folder</b><span>Absolute paths and ../ traversal that escape the opened file's directory are blocked — symlinks resolved before the check.</span></li>
+      <li><b>Quick Look never touches the network</b><span>Pressing Space on an untrusted file fetches zero remote content; remote images show a placeholder instead.</span></li>
+      <li><b>Read-only by design</b><span>MarkView is a viewer. It never modifies, executes, or phones home about your files.</span></li>
+    </ul>
+  </div>
+</section>
+
+<section id="install">
+  <div class="wrap">
+    <div class="kicker">Install</div>
+    <h2>From zero to default Markdown app in 60 seconds.</h2>
+    <p style="color:var(--fg-soft)">Requires macOS 13+ and Swift command line tools (no full Xcode needed).</p>
+    <div class="install-steps">
+      <div class="step"><span class="n"></span><div style="flex:1">
+        <b>Clone the repo</b>
+        <pre><code>git clone https://github.com/andy51002000/MarkView.git
+cd MarkView</code></pre>
+      </div></div>
+      <div class="step"><span class="n"></span><div style="flex:1">
+        <b>Run the installer</b>
+        <pre><code>bash install.sh</code></pre>
+        <p style="color:var(--fg-soft); font-size:.9rem; margin-top:6px">Builds the app, installs to ~/Applications, registers the Quick Look extension, and offers to make MarkView the default for .md files.</p>
+      </div></div>
+      <div class="step"><span class="n"></span><div style="flex:1">
+        <b>Done</b>
+        <p style="color:var(--fg-soft); font-size:.95rem">Double-click any .md file, or select one in Finder and hit Space.</p>
+      </div></div>
+    </div>
+    <div class="cta-row" style="justify-content:flex-start; margin-top:10px">
+      <a class="btn btn-primary" href="https://github.com/andy51002000/MarkView">View source on GitHub →</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>MarkView is MIT-licensed open source. Built with SwiftUI — no Electron, no telemetry.</p>
+    <p style="margin-top:6px"><a href="https://github.com/andy51002000/MarkView">GitHub</a> ·
+    <a href="https://github.com/andy51002000/MarkView/blob/main/README.md">Documentation</a> ·
+    <a href="https://github.com/andy51002000/MarkView/issues">Issues</a></p>
+  </div>
+</footer>
+
+</body>
+</html>
