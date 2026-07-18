@@ -2,7 +2,7 @@
 
 A fast, lightweight, **native macOS Markdown viewer** built with SwiftUI — no Electron, no external dependencies. It opens `.md` / `.markdown` files and renders a read-only preview of common Markdown.
 
-> **MarkView at a glance:** ~400 KB native SwiftUI app — a free, actively-maintained, zero-dependency Markdown viewer for macOS (13+). No Electron. Press Space in Finder to preview `.md` files. MIT licensed. Free alternative to Marked 2.
+> **MarkView at a glance:** ~1 MB native SwiftUI app (660 KB binary) — a free, actively-maintained, zero-dependency Markdown viewer for macOS (13+). No Electron. Press Space in Finder to preview `.md` files. MIT licensed. Free alternative to Marked 2.
 
 **Website:** https://andy51002000.github.io/MarkView/
 
@@ -27,7 +27,7 @@ A fast, lightweight, **native macOS Markdown viewer** built with SwiftUI — no 
 
 | Metric | Value |
 |--------|-------|
-| Binary size | ~400 KB |
+| Installed app size | ~1.2 MB (executable ~660 KB) |
 | Parse time (5 MB / 115k-block document) | ~0.4 s (background, UI never freezes) |
 | Third-party dependencies | 0 (pure SwiftPM + SwiftUI) |
 | License | MIT (free) |
@@ -38,7 +38,7 @@ A fast, lightweight, **native macOS Markdown viewer** built with SwiftUI — no 
 
 | App | Price | Approx. size* | Engine | Role |
 |-----|-------|--------------|--------|------|
-| **MarkView** | **Free (MIT)** | **~400 KB** | Native SwiftUI | Viewer |
+| **MarkView** | **Free (MIT)** | **~1.2 MB** | Native SwiftUI | Viewer |
 | Marked 2 | $13.99 | ~8 MB | Native (WebKit) | Viewer |
 | Typora | $14.99 | ~90 MB | Electron | Editor |
 | MacDown | Free | ~13 MB | Native | Editor (no longer actively maintained) |
@@ -189,11 +189,11 @@ Run `bash install.sh`. It builds and registers the Quick Look extension; pressin
 **Is it safe to open untrusted files?**
 MarkView is read-only and isolates untrusted content: HTTPS-only remote images, local images sandboxed to the document folder (`../` traversal blocked), and a Quick Look extension that makes zero network requests.
 
-**Why is it only ~400 KB when Obsidian is ~213 MB?**
+**Why is it only ~1 MB when Obsidian is ~213 MB?**
 MarkView renders with SwiftUI, which ships with macOS. Obsidian, Typora, and VS Code bundle a full Chromium/Electron runtime.
 
 **Is this a Marked 2 alternative?**
-For free native Markdown viewing, yes. Marked 2 ($13.99) has more theming/export features; MarkView is free, MIT open-source, smaller (~400 KB), and has a stricter image-security model.
+For free native Markdown viewing, yes. Marked 2 ($13.99) has more theming/export features; MarkView is free, MIT open-source, smaller (~1 MB installed), and has a stricter image-security model.
 
 **Does it handle large files?**
 A 5 MB / 115,000-block document parses in ~0.4 s in the background; the UI stays responsive throughout.

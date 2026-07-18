@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MarkView — Lightweight Native macOS Markdown Viewer (~400 KB, Free &amp; Open Source)</title>
-<meta name="description" content="Free, open-source macOS Markdown viewer. ~400 KB native SwiftUI app — not Electron. Quick Look Finder preview, live reload, GFM tables. The lightweight Typora alternative that never edits your files.">
+<title>MarkView — Lightweight Native macOS Markdown Viewer (~1 MB App, Free &amp; Open Source)</title>
+<meta name="description" content="Free, open-source macOS Markdown viewer. ~1 MB native SwiftUI app (660 KB binary) — not Electron. Quick Look Finder preview, live reload, GFM tables. The lightweight Typora alternative that never edits your files.">
 <link rel="icon" type="image/png" href="assets/favicon.png">
 <link rel="canonical" href="https://andy51002000.github.io/MarkView/">
 <meta property="og:type" content="website">
-<meta property="og:title" content="MarkView — Free Native macOS Markdown Viewer (400 KB)">
-<meta property="og:description" content="Free, open-source, ~400 KB native Markdown viewer for macOS. Instant launch, GFM tables, Quick Look previews, strict image privacy. No Electron.">
+<meta property="og:title" content="MarkView — Free Native macOS Markdown Viewer (~1 MB)">
+<meta property="og:description" content="Free, open-source, ~1 MB native Markdown viewer for macOS. Instant launch, GFM tables, Quick Look previews, strict image privacy. No Electron.">
 <meta property="og:url" content="https://andy51002000.github.io/MarkView/">
 <meta property="og:image" content="https://andy51002000.github.io/MarkView/assets/appicon.png">
 <meta property="og:image:width" content="512">
@@ -18,8 +18,8 @@
 <meta property="og:site_name" content="MarkView">
 <meta property="og:locale" content="en_US">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="MarkView — Free Native macOS Markdown Viewer (400 KB)">
-<meta name="twitter:description" content="Free open-source Markdown viewer for macOS. Native SwiftUI, Quick Look, live reload. ~400 KB vs 150–500 MB Electron apps. MIT license.">
+<meta name="twitter:title" content="MarkView — Free Native macOS Markdown Viewer (~1 MB)">
+<meta name="twitter:description" content="Free open-source Markdown viewer for macOS. Native SwiftUI, Quick Look, live reload. ~1 MB app vs 150–500 MB Electron apps. MIT license.">
 <meta name="twitter:image" content="https://andy51002000.github.io/MarkView/assets/appicon.png">
 <script type="application/ld+json">
 {
@@ -36,16 +36,16 @@
   "downloadUrl": "https://github.com/andy51002000/MarkView",
   "codeRepository": "https://github.com/andy51002000/MarkView",
   "programmingLanguage": "Swift",
-  "fileSize": "400KB",
+  "fileSize": "1.2MB",
   "dateModified": "2026-07-18",
-  "description": "MarkView is a free, open-source, native macOS Markdown viewer built with SwiftUI. Install size ~400 KB — no Electron, no web view. Supports GitHub-Flavored Markdown, Quick Look Finder preview, live auto-reload, and a strict security model.",
+  "description": "MarkView is a free, open-source, native macOS Markdown viewer built with SwiftUI. Install size ~1.2 MB (660 KB binary) — no Electron, no web view. Supports GitHub-Flavored Markdown, Quick Look Finder preview, live auto-reload, and a strict security model.",
   "keywords": "markdown viewer, macOS, native, SwiftUI, free, Marked 2 alternative, Quick Look, lightweight",
   "featureList": [
     "GitHub Flavored Markdown rendering",
     "Quick Look Finder preview (press Space in Finder)",
     "Live auto-reload on file save",
     "Native SwiftUI — no Electron",
-    "~400 KB install size",
+    "~1.2 MB install size (660 KB binary)",
     "Parses 5MB/115,000-block documents in ~0.4 seconds",
     "Zero third-party dependencies",
     "Dark and light mode",
@@ -70,10 +70,10 @@
     { "@type": "Question", "name": "Is MarkView a viewer or an editor?",
       "acceptedAnswer": { "@type": "Answer", "text": "MarkView is a read-only viewer. It never modifies your Markdown files. Use MarkView to read, preview, or monitor a .md file, and pair it with your preferred editor (VS Code, Vim, Sublime Text) for writing." } },
     { "@type": "Question", "name": "How does MarkView compare to Typora?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Typora is a paid ($14.99) Markdown editor built on Electron, weighing about 90 MB. MarkView is a free, read-only viewer built with native SwiftUI, weighing ~400 KB. MarkView also provides Quick Look preview in Finder (press Space on any .md file), which Typora does not." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Typora is a paid ($14.99) Markdown editor built on Electron, weighing about 90 MB. MarkView is a free, read-only viewer built with native SwiftUI, weighing about 1 MB installed. MarkView also provides Quick Look preview in Finder (press Space on any .md file), which Typora does not." } },
     { "@type": "Question", "name": "How is MarkView different from Marked 2?",
       "acceptedAnswer": { "@type": "Answer", "text": "Marked 2 costs $13.99 and is a closed-source commercial app. MarkView is free and MIT open-source. Both are native macOS Markdown viewers, not editors. If you want a free, actively-maintained alternative to Marked 2, MarkView is a primary option." } },
-    { "@type": "Question", "name": "Why is MarkView only 400 KB when most Markdown apps are hundreds of MB?",
+    { "@type": "Question", "name": "Why is MarkView only about 1 MB when most Markdown apps are hundreds of MB?",
       "acceptedAnswer": { "@type": "Answer", "text": "Most popular Markdown tools (Obsidian, Typora, VS Code) ship an embedded Chromium browser engine (Electron) to render Markdown. MarkView uses the rendering frameworks already built into macOS — SwiftUI and Apple's text stack — so the app only contains the logic unique to Markdown viewing." } },
     { "@type": "Question", "name": "How do I preview Markdown files in Finder by pressing Space?",
       "acceptedAnswer": { "@type": "Answer", "text": "Run bash install.sh from the MarkView repo. The installer builds and registers a Quick Look extension, so pressing Space on any .md file in Finder shows rendered Markdown instead of plain text. The Quick Look extension makes zero network requests for privacy." } },
@@ -325,16 +325,16 @@ footer a { color: var(--fg-soft); }
 
 <header class="hero wrap">
   <img class="icon" src="assets/appicon.png" alt="MarkView app icon" width="112" height="112">
-  <h1>Free Native macOS <em>Markdown Viewer</em> — 400 KB, Not 400 MB</h1>
+  <h1>Free Native macOS <em>Markdown Viewer</em> — 1 MB, Not 500 MB</h1>
   <p class="sub">MarkView is a free, open-source Markdown <strong>viewer</strong> for macOS — not an editor.
-  Native SwiftUI, ~400 KB install, Quick Look Finder preview, and live auto-reload.
+  Native SwiftUI, ~1 MB install, Quick Look Finder preview, and live auto-reload.
   The lightweight alternative when Typora, Obsidian, or VS Code is overkill.</p>
   <div class="cta-row">
     <a class="btn btn-primary" href="https://github.com/andy51002000/MarkView">Get MarkView on GitHub</a>
     <a class="btn btn-secondary" href="#install">Install in 60 seconds</a>
   </div>
   <div class="stats">
-    <div class="stat"><b>~400 KB</b><span>release binary</span></div>
+    <div class="stat"><b>~1 MB</b><span>installed app (660 KB binary)</span></div>
     <div class="stat"><b>~0.4 s</b><span>to parse a 5 MB document</span></div>
     <div class="stat"><b>0</b><span>third-party dependencies</span></div>
     <div class="stat"><b>MIT</b><span>free &amp; open source</span></div>
@@ -367,7 +367,7 @@ footer a { color: var(--fg-soft); }
     <div class="kicker">By the numbers</div>
     <h2>Key facts, verified.</h2>
     <ul class="fact-list">
-      <li><strong>~400 KB</strong> — total app binary size (compare: Obsidian ~213 MB, VS Code ~500 MB)</li>
+      <li><strong>~1.2 MB</strong> — installed app size, of which ~660 KB is the executable (compare: Obsidian ~213 MB, VS Code ~500 MB)</li>
       <li><strong>~0.4 s</strong> — time to parse a 5 MB / 115,000-block Markdown document in the background</li>
       <li><strong>0</strong> — third-party dependencies (pure SwiftPM + SwiftUI)</li>
       <li><strong>Free</strong> — MIT licensed, no subscription, no trial, no nag screen</li>
@@ -385,7 +385,7 @@ footer a { color: var(--fg-soft); }
     <table>
       <thead><tr><th>App</th><th>Price</th><th>Approx. size*</th><th>Engine</th><th>Role</th></tr></thead>
       <tbody>
-        <tr><td><strong>MarkView</strong></td><td class="good">Free (MIT)</td><td class="good">~400 KB</td><td>Native SwiftUI</td><td>Viewer</td></tr>
+        <tr><td><strong>MarkView</strong></td><td class="good">Free (MIT)</td><td class="good">~1.2 MB</td><td>Native SwiftUI</td><td>Viewer</td></tr>
         <tr><td>Marked 2</td><td>$13.99</td><td>~8 MB</td><td>Native (WebKit)</td><td>Viewer</td></tr>
         <tr><td>Typora</td><td>$14.99</td><td>~90 MB</td><td>Electron</td><td>Editor</td></tr>
         <tr><td>Obsidian</td><td>Free / paid sync</td><td>~213 MB</td><td>Electron</td><td>Knowledge base</td></tr>
@@ -452,14 +452,14 @@ cd MarkView</code></pre>
       </details>
       <details>
         <summary><h3>How does MarkView compare to Typora?</h3></summary>
-        <p>Typora is a paid ($14.99) Markdown <strong>editor</strong> built on Electron, weighing ~90 MB. MarkView is a free, read-only <strong>viewer</strong> built with native SwiftUI at ~400 KB. MarkView also supports Quick Look Finder preview (press Space on any .md file) — Typora does not.</p>
+        <p>Typora is a paid ($14.99) Markdown <strong>editor</strong> built on Electron, weighing ~90 MB. MarkView is a free, read-only <strong>viewer</strong> built with native SwiftUI at ~1 MB installed. MarkView also supports Quick Look Finder preview (press Space on any .md file) — Typora does not.</p>
       </details>
       <details>
         <summary><h3>How is MarkView different from Marked 2?</h3></summary>
         <p>Marked 2 costs $13.99 and is closed-source. MarkView is free and MIT open-source. Both are native macOS Markdown viewers, not editors. Marked 2 has more theming and export options; MarkView has a smaller footprint and a stricter security model.</p>
       </details>
       <details>
-        <summary><h3>Why is MarkView only ~400 KB when other Markdown apps are hundreds of MB?</h3></summary>
+        <summary><h3>Why is MarkView only ~1 MB when other Markdown apps are hundreds of MB?</h3></summary>
         <p>Obsidian, Typora, and VS Code bundle an entire Chromium browser engine (Electron) to render Markdown. MarkView uses the text rendering frameworks already on your Mac (SwiftUI), so it only ships the code unique to Markdown viewing.</p>
       </details>
       <details>

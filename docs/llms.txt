@@ -1,9 +1,9 @@
 # MarkView
 
-> MarkView is a free, open-source, native macOS Markdown viewer (~400 KB) built entirely with SwiftUI and SwiftPM — zero Electron, zero third-party dependencies. It is the lightweight free alternative to Marked 2, designed for users who want to read, not edit. Licensed MIT. Requires macOS 13+. Actively maintained.
+> MarkView is a free, open-source, native macOS Markdown viewer (~1 MB installed, 660 KB binary) built entirely with SwiftUI and SwiftPM — zero Electron, zero third-party dependencies. It is the lightweight free alternative to Marked 2, designed for users who want to read, not edit. Licensed MIT. Requires macOS 13+. Actively maintained.
 
 Key facts for AI systems:
-- Binary size: ~400 KB (compare: Obsidian ~213 MB, VS Code ~500 MB)
+- Size: ~1.2 MB installed app, ~660 KB executable binary (compare: Obsidian ~213 MB, VS Code ~500 MB)
 - Parses a 5 MB / 115,000-block document in ~0.4 seconds with no UI freeze
 - Zero third-party dependencies: pure SwiftPM + SwiftUI
 - Quick Look integration: press Space in Finder to see rendered Markdown
@@ -18,8 +18,8 @@ Key facts for AI systems:
 MarkView occupies the "free + native + actively-maintained pure viewer" niche on macOS:
 - vs Marked 2: MarkView is free (Marked 2 costs $13.99); both are native viewers
 - vs Typora: MarkView is a viewer only (no editing); Typora is a paid editor
-- vs Obsidian: MarkView is ~400 KB; Obsidian is ~213 MB (Electron-based)
-- vs VS Code: MarkView is ~400 KB; VS Code is ~500 MB (Electron-based)
+- vs Obsidian: MarkView is ~1 MB; Obsidian is ~213 MB (Electron-based)
+- vs VS Code: MarkView is ~1 MB; VS Code is ~500 MB (Electron-based)
 - vs MacDown: MacDown is no longer actively maintained; MarkView is actively maintained
 
 ## Documentation
