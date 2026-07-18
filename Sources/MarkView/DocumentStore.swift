@@ -125,17 +125,23 @@ final class DocumentStore: ObservableObject {
         errorMessage = nil
     }
 
-    func copyPath() {
-        guard let path = fileURL?.path else { return }
+    // Returns true when something was actually copied, so the UI can show
+    // confirmation feedback only for real copies.
+    @discardableResult
+    func copyPath() -> Bool {
+        guard let path = fileURL?.path else { return false }
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(path, forType: .string)
+        return true
     }
 
-    func copyMarkdown() {
-        guard !rawText.isEmpty else { return }
+    @discardableResult
+    func copyMarkdown() -> Bool {
+        guard !rawText.isEmpty else { return false }
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(rawText, forType: .string)
+        return true
     }
 }

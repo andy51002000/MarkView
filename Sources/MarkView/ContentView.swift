@@ -28,17 +28,13 @@ struct ContentView: View {
             .keyboardShortcut("r", modifiers: [.command])
             .disabled(store.fileURL == nil)
 
-            Button {
+            CopyFeedbackButton(title: "Get Path", systemImage: "doc.on.clipboard") {
                 store.copyPath()
-            } label: {
-                Label("Get Path", systemImage: "doc.on.clipboard")
             }
             .disabled(store.fileURL == nil)
 
-            Button {
+            CopyFeedbackButton(title: "Copy Markdown", systemImage: "doc.on.doc") {
                 store.copyMarkdown()
-            } label: {
-                Label("Copy Markdown", systemImage: "doc.on.doc")
             }
             .disabled(store.rawText.isEmpty)
 
