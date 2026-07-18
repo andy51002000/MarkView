@@ -58,6 +58,32 @@ After this, double-clicking a `.md` or `.markdown` file in Finder opens it in Ma
 
 > If Finder still shows an old app in "Open With", right-click a file → Open With → Other → MarkView, or log out/in to let LaunchServices refresh its cache. macOS may show a Gatekeeper prompt on first launch because the bundle is ad-hoc signed (right-click → Open to approve).
 
+## Quick Look preview (press Space in Finder)
+
+`install.sh` also builds and embeds a **Quick Look preview extension**
+(`MarkViewQuickLook.appex`), so selecting a `.md` / `.markdown` file in Finder
+and pressing **Space** shows a rendered preview (headings, lists — including
+nested, tables, code blocks, quotes, links, local images) instead of plain
+text. The extension is compiled with `swiftc` directly — no Xcode required —
+and reuses the app's parser.
+
+Quick Look previews follow a stricter security model than the app:
+
+- **Remote images are never fetched** in a preview (a placeholder line is
+  shown instead), so pressing Space on an untrusted document contacts no
+  network hosts.
+- Local images must live inside the previewed file's directory (same
+  path-escape rules as the app).
+- Very large documents are truncated in the preview with a notice; open the
+  file in MarkView for the full render.
+
+If a preview still shows plain text after installing:
+
+1. Check the extension is registered: `pluginkit -m -p com.apple.quicklook.preview | grep markview`
+2. Make sure it is enabled in **System Settings → Login Items & Extensions →
+   Quick Look**.
+3. Reset the Quick Look cache: `qlmanage -r && qlmanage -r cache`, then retry.
+
 ## Tests
 
 Run the unit test suite (parser + image-source security):
@@ -91,7 +117,12 @@ Sources/MarkView/
   MarkdownParser.swift   # dependency-free block parser
   MarkdownView.swift     # SwiftUI block renderer (uses AttributedString for inline)
   BlockViews.swift       # table/image block views + image source security
-Tests/MarkViewTests/     # XCTest suite (parser, image source resolution)
+  QuickLookRendering.swift # NSAttributedString renderer shared with the QL extension
+QuickLookExtension/      # Quick Look preview extension (built by install.sh)
+  PreviewViewController.swift
+  Info.plist
+  MarkViewQuickLook.entitlements
+Tests/MarkViewTests/     # test suite (parser, image security, QL rendering)
 Samples/SAMPLE.md        # demo document exercising all features
 ```
 
