@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://andy51002000.github.io/MarkView/sitemap.xml

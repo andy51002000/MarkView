@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MarkView vs Typora, Marked 2 &amp; Obsidian — Free Lightweight Markdown Viewer for Mac</title>
+<meta name="description" content="Honest comparison: MarkView (free, ~400 KB, native SwiftUI viewer) vs Typora ($14.99 editor), Marked 2 ($13.99 viewer), Obsidian (~213 MB Electron), and VS Code. Which fits a reading-only Markdown workflow on macOS?">
+<link rel="icon" type="image/png" href="../assets/favicon.png">
+<link rel="canonical" href="https://andy51002000.github.io/MarkView/compare/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MarkView vs Typora, Marked 2 &amp; Obsidian — Free Lightweight Markdown Viewer for Mac">
+<meta property="og:description" content="Free ~400 KB native viewer vs paid editors and Electron apps. Honest size, price, and feature comparison for macOS Markdown reading.">
+<meta property="og:url" content="https://andy51002000.github.io/MarkView/compare/">
+<meta property="og:image" content="https://andy51002000.github.io/MarkView/assets/appicon.png">
+<meta property="og:site_name" content="MarkView">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="MarkView vs Typora, Marked 2 &amp; Obsidian">
+<meta name="twitter:description" content="Free ~400 KB native macOS Markdown viewer compared honestly against Typora, Marked 2, Obsidian, and VS Code.">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    { "@type": "Question", "name": "Is there a free Typora alternative for Mac?",
+      "acceptedAnswer": { "@type": "Answer", "text": "MarkView is a free, MIT-licensed native macOS app if you only need to read Markdown. Typora is a paid ($14.99) Electron editor; MarkView is a ~400 KB read-only viewer with Quick Look Finder preview. If you need to edit Markdown, pair MarkView with any free editor like VS Code." } },
+    { "@type": "Question", "name": "Is there a free alternative to Marked 2 on Mac?",
+      "acceptedAnswer": { "@type": "Answer", "text": "MarkView is a free, actively-maintained, MIT open-source alternative to Marked 2 for viewing Markdown on macOS. Marked 2 costs $13.99 and offers more theming and export options; MarkView is lighter (~400 KB), includes a Quick Look extension, and enforces a stricter image-security model." } },
+    { "@type": "Question", "name": "What is a lightweight Obsidian alternative for reading Markdown on Mac?",
+      "acceptedAnswer": { "@type": "Answer", "text": "If you use Obsidian mainly to read Markdown files, MarkView offers the same reading capability at ~400 KB instead of ~213 MB. MarkView opens any .md file directly with no vault setup, launches instantly, and adds Quick Look previews in Finder. Obsidian remains the better choice for linked knowledge-base workflows." } }
+  ]
+}
+</script>
+<style>
+:root {
+  --bg: #fafaf8; --bg-alt: #f0f0ec; --fg: #23272a; --fg-soft: #5b6167;
+  --accent: #2aa79b; --accent-deep: #1d7d74; --card: #ffffff;
+  --border: #e2e2dd; --code-bg: #ecece8;
+  --shadow: 0 1px 3px rgba(30,40,40,.08), 0 8px 24px rgba(30,40,40,.06);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1b1e20; --bg-alt: #212528; --fg: #e8e8e4; --fg-soft: #a3aab0;
+    --accent: #3fbfb2; --accent-deep: #63d4c8; --card: #24282b;
+    --border: #33383c; --code-bg: #2b3034;
+    --shadow: 0 1px 3px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.3);
+  }
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+  background: var(--bg); color: var(--fg); -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 860px; margin: 0 auto; padding: 0 24px; }
+a { color: var(--accent-deep); }
+header.top { padding: 28px 0; border-bottom: 1px solid var(--border); }
+header.top .wrap { display: flex; align-items: center; gap: 12px; }
+header.top img { width: 36px; height: 36px; border-radius: 9px; }
+header.top a.brand { font-weight: 700; color: var(--fg); text-decoration: none; font-size: 1.05rem; }
+main { padding: 48px 0 64px; }
+h1 { font-size: clamp(1.7rem, 4vw, 2.4rem); line-height: 1.15; letter-spacing: -.015em; margin-bottom: .5em; }
+h2 { font-size: 1.45rem; margin: 2.2em 0 .5em; }
+p { margin-bottom: 1em; }
+p.lead { font-size: 1.1rem; color: var(--fg-soft); }
+table { width: 100%; border-collapse: collapse; margin: 26px 0; background: var(--card); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); font-size: .93rem; }
+th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+th { background: var(--code-bg); font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; }
+tr:last-child td { border-bottom: none; }
+td.good { color: var(--accent-deep); font-weight: 600; }
+.note { font-size: .82rem; color: var(--fg-soft); }
+code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em; background: var(--code-bg); border-radius: 6px; padding: .15em .4em; }
+.cta {
+  display: inline-block; margin-top: 18px; padding: 13px 26px; border-radius: 10px;
+  font-weight: 600; text-decoration: none; background: var(--accent); color: #fff; box-shadow: var(--shadow);
+}
+footer { padding: 36px 0 48px; border-top: 1px solid var(--border); color: var(--fg-soft); font-size: .88rem; text-align: center; }
+footer a { color: var(--fg-soft); }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <img src="../assets/appicon.png" alt="MarkView app icon">
+    <a class="brand" href="../">MarkView</a>
+    <span style="color:var(--fg-soft)">/ Compare</span>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1>MarkView vs Popular Markdown Apps — Why Lightweight Wins for Reading</h1>
+  <p class="lead">Most "Markdown apps" are editors. If your workflow is <em>read, preview, monitor</em> — not write —
+  you don't need a 90–500 MB editor running a browser engine. Here's an honest comparison.</p>
+
+  <table>
+    <thead>
+      <tr><th>App</th><th>Price</th><th>Size*</th><th>Engine</th><th>Quick Look</th><th>Edits files?</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>MarkView</strong></td><td class="good">Free (MIT)</td><td class="good">~400 KB</td><td>Native SwiftUI</td><td class="good">Yes</td><td>No — viewer only</td></tr>
+      <tr><td>Typora</td><td>$14.99</td><td>~90 MB</td><td>Electron</td><td>No</td><td>Yes — editor</td></tr>
+      <tr><td>Marked 2</td><td>$13.99</td><td>~8 MB</td><td>Native (WebKit)</td><td>No</td><td>No — viewer</td></tr>
+      <tr><td>Obsidian</td><td>Free / paid sync</td><td>~213 MB</td><td>Electron</td><td>No</td><td>Yes — knowledge base</td></tr>
+      <tr><td>MacDown</td><td>Free</td><td>~13 MB</td><td>Native</td><td>No</td><td>Yes — editor (no longer actively maintained)</td></tr>
+      <tr><td>VS Code</td><td>Free</td><td>~500 MB</td><td>Electron</td><td>No</td><td>Yes — editor/IDE</td></tr>
+    </tbody>
+  </table>
+  <p class="note">*Sizes and prices approximate as of mid-2026, from vendor download pages; re-check before purchasing. Every app listed here is excellent at what it's designed for — the question is whether you need an editor or a viewer.</p>
+
+  <h2>MarkView vs Typora</h2>
+  <p>Typora is a polished paid ($14.99) Markdown <strong>editor</strong> built on Electron (~90 MB). MarkView is a free, read-only
+  <strong>viewer</strong> built with native SwiftUI (~400 KB). The difference is intent: Typora is where you write; MarkView is
+  what opens when you double-click a <code>.md</code> file just to read it. MarkView also adds Quick Look previews —
+  press Space on a Markdown file in Finder and see it rendered without launching anything. Typora has no Quick Look support.</p>
+
+  <h2>MarkView vs Marked 2</h2>
+  <p>Marked 2 ($13.99) is the best-known native Markdown <strong>viewer</strong> on macOS, and the closest product to MarkView in spirit —
+  both are viewers, not editors. Marked 2 offers deeper theming, export, and writer-analytics features. MarkView's case:
+  it's free, MIT open-source, ~400 KB, ships a Quick Look extension, and applies a stricter image-security model
+  (HTTPS-only remote images, directory-sandboxed local images, zero network requests in Quick Look). If you need Marked 2's
+  pro features, buy it. If you need a fast, free reader, MarkView covers it.</p>
+
+  <h2>MarkView vs Obsidian (for reading only)</h2>
+  <p>Obsidian is a knowledge-base platform — vaults, plugins, graph view, sync. If that's your workflow, keep Obsidian.
+  But if you find yourself opening Obsidian just to <em>read</em> a stray <code>README.md</code>, that's a ~213 MB Electron
+  launch for a task MarkView does in ~400 KB with instant startup. MarkView opens any Markdown file directly — no vault,
+  no indexing, no setup.</p>
+
+  <h2>The pattern</h2>
+  <p>Reading Markdown doesn't require a browser engine. MarkView renders with the frameworks already installed on every Mac,
+  which is why it's three orders of magnitude smaller than Electron-based tools while parsing a 5 MB / 115,000-block
+  document in ~0.4 seconds without freezing the UI.</p>
+
+  <a class="cta" href="../#install">Install MarkView free →</a>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><a href="../">MarkView home</a> · <a href="https://github.com/andy51002000/MarkView">GitHub</a> · MIT licensed</p>
+  </div>
+</footer>
+
+</body>
+</html>
