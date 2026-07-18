@@ -168,4 +168,52 @@ import Testing
         // Reading .id twice must return the same value (no regeneration).
         #expect(blocks[0].id == blocks[0].id)
     }
+
+    @Test func blockIDsAreDeterministicAcrossReparses() throws {
+        let input = """
+        # Title
+
+        Some paragraph with **bold**.
+
+        - item one
+        - item two
+
+        | A | B |
+        | - | - |
+        | 1 | 2 |
+
+        > quoted
+
+        ```swift
+        let x = 1
+        ```
+
+        ---
+        """
+        let first = MarkdownParser.parse(input).map(\.id)
+        let second = MarkdownParser.parse(input).map(\.id)
+        #expect(first == second,
+                "Re-parsing the same document must yield the identical ID sequence")
+        #expect(!first.isEmpty)
+    }
+
+    @Test func duplicateBlocksGetDistinctIDsButPrefixStaysStable() throws {
+        let input = """
+        same paragraph
+
+        same paragraph
+
+        same paragraph
+        """
+        let blocks = MarkdownParser.parse(input)
+        #expect(blocks.count == 3)
+        let ids = blocks.map(\.id)
+        #expect(Set(ids).count == 3,
+                "Identical content occurring multiple times must yield distinct IDs")
+
+        // Editing later content must not disturb IDs of earlier unchanged blocks.
+        let edited = MarkdownParser.parse(input + "\n\nnew tail paragraph")
+        #expect(Array(edited.prefix(3).map(\.id)) == ids,
+                "Unchanged leading blocks must keep their IDs after an append-only edit")
+    }
 }

@@ -12,10 +12,12 @@ final class DocumentStore: ObservableObject {
     @Published var baseURL: URL?
     @Published var fileURL: URL?
     @Published var blocks: [MarkdownBlock] = []
+    @Published var inlineCache: InlineRenderCache = .empty
 
     private static let allowedExtensions: Set<String> = ["md", "markdown", "mdown", "txt"]
     private var activeLoadID = UUID()
     private var fileWatcher: FileWatcher?
+    private var inFlightLoad: Task<Void, Never>?
 
     func openWithPanel() {
         let panel = NSOpenPanel()
@@ -54,8 +56,14 @@ final class DocumentStore: ObservableObject {
     private func loadDocument(at url: URL, startWatchingOnSuccess: Bool) {
         let loadID = UUID()
         activeLoadID = loadID
-        Task.detached(priority: .userInitiated) { [weak self] in
+        // Cancel any parse still running for a previous (now superseded)
+        // load so rapid saves don't stack background work.
+        inFlightLoad?.cancel()
+        inFlightLoad = Task.detached(priority: .userInitiated) { [weak self] in
             let result = Result { try DocumentLoader.load(url: url) }
+            if case .failure(let error) = result, error is CancellationError {
+                return // superseded load; a newer one owns the UI state
+            }
             await self?.finishLoading(
                 result,
                 url: url,
@@ -78,6 +86,7 @@ final class DocumentStore: ObservableObject {
             fileName = url.lastPathComponent
             baseURL = url.deletingLastPathComponent().standardizedFileURL
             fileURL = url
+            inlineCache = document.inlineCache
             blocks = document.blocks
             errorMessage = nil
             if startWatchingOnSuccess || fileWatcher == nil {

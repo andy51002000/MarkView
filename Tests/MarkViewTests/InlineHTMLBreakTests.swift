@@ -65,4 +65,27 @@ import Testing
         }
         #expect(code == "first<br>second")
     }
+
+    @Test func inlineCacheCoversAllInlineStringsAndMatchesOnDemandRender() throws {
+        let blocks = MarkdownParser.parse("""
+        # Head<br>ing
+
+        Para with **bold**<br/>tail
+
+        - li `<br>` literal
+
+        | H1 | H2 |
+        | -- | -- |
+        | c1<br>x | c2 |
+
+        > quo<br>te
+        """)
+        let cache = try InlineRenderCache.build(for: blocks)
+        for text in ["Head<br>ing", "Para with **bold**<br/>tail",
+                     "li `<br>` literal", "H1", "c1<br>x", "quo<br>te"] {
+            #expect(cache[text] != nil, "cache must cover: \(text)")
+            #expect(cache[text] == renderInlineMarkdown(text),
+                    "cached render must equal on-demand render for: \(text)")
+        }
+    }
 }

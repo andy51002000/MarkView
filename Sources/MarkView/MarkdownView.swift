@@ -1,14 +1,42 @@
 import SwiftUI
 
+// A contiguous run of blocks rendered as one lazy row. Chunking keeps the
+// outer lazy list small (hundreds of rows instead of hundreds of thousands),
+// which avoids exhausting SwiftUI's attribute graph on huge documents while
+// still deferring off-screen layout work.
+private struct BlockChunk: Identifiable {
+    let id: String
+    let blocks: ArraySlice<MarkdownBlock>
+}
+
 struct MarkdownView: View {
     let blocks: [MarkdownBlock]
     var baseURL: URL? = nil
+    var inlineCache: InlineRenderCache = .empty
+
+    private static let chunkSize = 64
+
+    private var chunks: [BlockChunk] {
+        stride(from: 0, to: blocks.count, by: Self.chunkSize).map { start in
+            let slice = blocks[start..<min(start + Self.chunkSize, blocks.count)]
+            // Chunk identity derives from its first block's stable ID, so
+            // unchanged regions keep view identity across reloads.
+            return BlockChunk(id: "\(slice.first?.id ?? "empty")@\(start)", blocks: slice)
+        }
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            ForEach(blocks) { block in
-                blockView(block)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+        // Lazy at chunk granularity: only chunks near the viewport are
+        // instantiated, so large documents stay responsive.
+        LazyVStack(alignment: .leading, spacing: 14) {
+            ForEach(chunks) { chunk in
+                VStack(alignment: .leading, spacing: 14) {
+                    ForEach(chunk.blocks) { block in
+                        blockView(block)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .textSelection(.enabled)
@@ -111,8 +139,9 @@ struct MarkdownView: View {
         }
     }
 
-    // Uses SwiftUI's native inline Markdown for bold/italic/code/links.
+    // Uses SwiftUI's native inline Markdown for bold/italic/code/links,
+    // served from the background-built cache when available.
     private func inlineText(_ text: String) -> Text {
-        inlineMarkdownText(text)
+        inlineMarkdownText(text, cache: inlineCache)
     }
 }

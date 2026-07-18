@@ -1,18 +1,92 @@
 import SwiftUI
 
-// Shared inline Markdown renderer (bold/italic/code/links).
-func inlineMarkdownText(_ text: String) -> Text {
+// MARK: - Inline rendering
+
+// Renders inline Markdown (bold/italic/code/links) with <br> normalization.
+// This is the single source of truth used both by the background cache
+// builder and by the on-demand fallback path.
+func renderInlineMarkdown(_ text: String) -> AttributedString {
     let normalized = replacingHTMLLineBreaks(in: text)
     if let attributed = try? AttributedString(
         markdown: normalized,
         options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)
     ) {
-        return Text(attributed)
+        return attributed
     }
-    return Text(normalized)
+    return AttributedString(normalized)
+}
+
+// Immutable cache of pre-rendered inline strings, built off the main thread
+// during document load so view bodies avoid AttributedString(markdown:) work.
+struct InlineRenderCache: Sendable {
+    static let empty = InlineRenderCache(storage: [:])
+
+    private let storage: [String: AttributedString]
+
+    private init(storage: [String: AttributedString]) {
+        self.storage = storage
+    }
+
+    subscript(text: String) -> AttributedString? {
+        storage[text]
+    }
+
+    // Above this block count, skip precomputing: LazyVStack only renders
+    // visible rows on demand, so paying seconds of up-front render work for
+    // huge documents would delay first paint for little benefit.
+    static let precomputeBlockLimit = 20_000
+
+    // Renders every inline-bearing string in the parsed document exactly once.
+    static func build(
+        for blocks: [MarkdownBlock],
+        checkingCancellation: Bool = false
+    ) throws -> InlineRenderCache {
+        guard blocks.count <= precomputeBlockLimit else { return .empty }
+        var storage: [String: AttributedString] = [:]
+        var processed = 0
+
+        func add(_ text: String) throws {
+            guard storage[text] == nil else { return }
+            storage[text] = renderInlineMarkdown(text)
+            processed += 1
+            if checkingCancellation, processed % 512 == 0 {
+                try Task.checkCancellation()
+            }
+        }
+
+        for block in blocks {
+            switch block {
+            case .heading(_, _, let text), .paragraph(_, let text), .quote(_, let text):
+                try add(text)
+            case .unorderedList(_, let items), .orderedList(_, let items):
+                for item in items { try add(item) }
+            case .taskList(_, let items):
+                for item in items { try add(item.text) }
+            case .table(_, let headers, let rows):
+                for header in headers { try add(header) }
+                for row in rows { for cell in row { try add(cell) } }
+            case .codeBlock, .image, .thematicBreak:
+                continue // rendered as plain text; no inline pass needed
+            }
+        }
+        return InlineRenderCache(storage: storage)
+    }
+}
+
+// Shared inline Markdown renderer. Prefers the pre-rendered cache and falls
+// back to on-demand rendering for strings not covered by it.
+func inlineMarkdownText(_ text: String, cache: InlineRenderCache = .empty) -> Text {
+    Text(cache[text] ?? renderInlineMarkdown(text))
 }
 
 func replacingHTMLLineBreaks(in text: String) -> String {
+    // Fast paths: no "<" means nothing to replace; no "`" means no code
+    // spans to protect, so the plain-text pass suffices.
+    guard text.utf8.contains(UInt8(ascii: "<")) else { return text }
+    guard text.utf8.contains(UInt8(ascii: "`")) else {
+        return replacingHTMLLineBreaks(inPlainText: text)
+    }
+
     var result = ""
     var plainStart = text.startIndex
     var index = text.startIndex
@@ -44,11 +118,22 @@ func replacingHTMLLineBreaks(in text: String) -> String {
     return result
 }
 
+// Compiled once; String(options: .regularExpression) re-parses the pattern
+// on every call, which showed up in the hot render path.
+private let htmlBreakRegex = try! NSRegularExpression(
+    pattern: #"</?br\s*/?>"#,
+    options: [.caseInsensitive]
+)
+
 private func replacingHTMLLineBreaks(inPlainText text: String) -> String {
-    text.replacingOccurrences(
-        of: #"</?br\s*/?>"#,
-        with: "\n",
-        options: [.regularExpression, .caseInsensitive]
+    // Fast path: the vast majority of lines contain no "<" at all.
+    guard text.utf8.contains(UInt8(ascii: "<")) else { return text }
+    let range = NSRange(text.startIndex..., in: text)
+    return htmlBreakRegex.stringByReplacingMatches(
+        in: text,
+        options: [],
+        range: range,
+        withTemplate: "\n"
     )
 }
 
@@ -97,6 +182,7 @@ private func isEscaped(_ index: String.Index, in text: String) -> Bool {
 struct TableBlockView: View {
     let headers: [String]
     let rows: [[String]]
+    var inlineCache: InlineRenderCache = .empty
 
     private var columnCount: Int {
         max(headers.count, rows.map(\.count).max() ?? 0)
@@ -106,9 +192,12 @@ struct TableBlockView: View {
         VStack(alignment: .leading, spacing: 0) {
             headerRow
             Divider()
-            ForEach(Array(rows.enumerated()), id: \.offset) { idx, row in
-                dataRow(row, isEven: idx % 2 == 0)
-                if idx < rows.count - 1 { Divider().opacity(0.4) }
+            // Lazy rows: big tables only lay out what scrolls into view.
+            LazyVStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(rows.enumerated()), id: \.offset) { idx, row in
+                    dataRow(row, isEven: idx % 2 == 0)
+                    if idx < rows.count - 1 { Divider().opacity(0.4) }
+                }
             }
         }
         .overlay(

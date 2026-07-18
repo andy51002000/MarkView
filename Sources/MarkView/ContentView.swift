@@ -62,10 +62,14 @@ struct ContentView: View {
                        subtitle: "⌘O — supports .md and .markdown")
         } else {
             ScrollView {
-                MarkdownView(blocks: store.blocks, baseURL: store.baseURL)
-                    .padding(24)
-                    .frame(maxWidth: 760, alignment: .leading)
-                    .frame(maxWidth: .infinity, alignment: .center)
+                MarkdownView(
+                    blocks: store.blocks,
+                    baseURL: store.baseURL,
+                    inlineCache: store.inlineCache
+                )
+                .padding(24)
+                .frame(maxWidth: 760, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .center)
             }
         }
     }

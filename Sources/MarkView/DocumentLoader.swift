@@ -3,6 +3,7 @@ import Foundation
 struct LoadedDocument: Sendable {
     let text: String
     let blocks: [MarkdownBlock]
+    let inlineCache: InlineRenderCache
 }
 
 enum DocumentLoader {
@@ -21,7 +22,11 @@ enum DocumentLoader {
         guard let text = decode(data) else {
             throw DocumentLoadError.unsupportedEncoding
         }
-        return LoadedDocument(text: text, blocks: MarkdownParser.parse(text))
+        // Both passes run on the loading task's background context and honor
+        // cooperative cancellation so superseded reloads stop early.
+        let blocks = try MarkdownParser.parse(text, checkingCancellation: true)
+        let cache = try InlineRenderCache.build(for: blocks, checkingCancellation: true)
+        return LoadedDocument(text: text, blocks: blocks, inlineCache: cache)
     }
 
     private static func decode(_ data: Data) -> String? {

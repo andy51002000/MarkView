@@ -1,5 +1,22 @@
 import Foundation
 
+// Incremental FNV-1a 64-bit hasher; stable across processes and launches.
+struct FNV1a {
+    private(set) var value: UInt64 = 0xcbf29ce484222325
+
+    mutating func combine(byte: UInt8) {
+        value ^= UInt64(byte)
+        value = value &* 0x100000001b3
+    }
+
+    mutating func combine(_ string: String) {
+        for byte in string.utf8 {
+            value ^= UInt64(byte)
+            value = value &* 0x100000001b3
+        }
+    }
+}
+
 // A single task-list entry.
 struct TaskItem: Hashable, Sendable {
     let checked: Bool
@@ -7,19 +24,24 @@ struct TaskItem: Hashable, Sendable {
 }
 
 // A lightweight block-level Markdown model.
+//
+// IDs are deterministic: derived from the block's content plus an occurrence
+// counter (see MarkdownParser.assignStableIDs). Re-parsing the same document
+// yields the same ID sequence, so SwiftUI keeps view identity (and scroll
+// position) across auto-reloads; duplicate blocks still get distinct IDs.
 enum MarkdownBlock: Identifiable, Sendable {
-    case heading(id: UUID = UUID(), level: Int, text: String)
-    case paragraph(id: UUID = UUID(), text: String)
-    case unorderedList(id: UUID = UUID(), items: [String])
-    case orderedList(id: UUID = UUID(), items: [String])
-    case taskList(id: UUID = UUID(), items: [TaskItem])
-    case codeBlock(id: UUID = UUID(), language: String?, code: String)
-    case quote(id: UUID = UUID(), text: String)
-    case table(id: UUID = UUID(), headers: [String], rows: [[String]])
-    case image(id: UUID = UUID(), alt: String, source: String)
-    case thematicBreak(id: UUID = UUID())
+    case heading(id: String = "", level: Int, text: String)
+    case paragraph(id: String = "", text: String)
+    case unorderedList(id: String = "", items: [String])
+    case orderedList(id: String = "", items: [String])
+    case taskList(id: String = "", items: [TaskItem])
+    case codeBlock(id: String = "", language: String?, code: String)
+    case quote(id: String = "", text: String)
+    case table(id: String = "", headers: [String], rows: [[String]])
+    case image(id: String = "", alt: String, source: String)
+    case thematicBreak(id: String = "")
 
-    var id: UUID {
+    var id: String {
         switch self {
         case .heading(let id, _, _),
              .paragraph(let id, _),
@@ -34,17 +56,99 @@ enum MarkdownBlock: Identifiable, Sendable {
             return id
         }
     }
+
+    // A stable 64-bit digest of the block's content (FNV-1a, process- and
+    // launch-independent, unlike Hasher). Field separators (0x1D-0x1F) keep
+    // adjacent fields from aliasing each other.
+    var contentHash: UInt64 {
+        var h = FNV1a()
+        switch self {
+        case .heading(_, let level, let text):
+            h.combine(byte: 0x01); h.combine(byte: UInt8(level)); h.combine(text)
+        case .paragraph(_, let text):
+            h.combine(byte: 0x02); h.combine(text)
+        case .unorderedList(_, let items):
+            h.combine(byte: 0x03)
+            for item in items { h.combine(item); h.combine(byte: 0x1F) }
+        case .orderedList(_, let items):
+            h.combine(byte: 0x04)
+            for item in items { h.combine(item); h.combine(byte: 0x1F) }
+        case .taskList(_, let items):
+            h.combine(byte: 0x05)
+            for item in items {
+                h.combine(byte: item.checked ? 1 : 0)
+                h.combine(item.text); h.combine(byte: 0x1F)
+            }
+        case .codeBlock(_, let language, let code):
+            h.combine(byte: 0x06); h.combine(language ?? ""); h.combine(byte: 0x1E); h.combine(code)
+        case .quote(_, let text):
+            h.combine(byte: 0x07); h.combine(text)
+        case .table(_, let headers, let rows):
+            h.combine(byte: 0x08)
+            for header in headers { h.combine(header); h.combine(byte: 0x1F) }
+            h.combine(byte: 0x1E)
+            for row in rows {
+                for cell in row { h.combine(cell); h.combine(byte: 0x1F) }
+                h.combine(byte: 0x1D)
+            }
+        case .image(_, let alt, let source):
+            h.combine(byte: 0x09); h.combine(alt); h.combine(byte: 0x1E); h.combine(source)
+        case .thematicBreak:
+            h.combine(byte: 0x0A)
+        }
+        return h.value
+    }
+
+    func withID(_ newID: String) -> MarkdownBlock {
+        switch self {
+        case .heading(_, let level, let text):
+            return .heading(id: newID, level: level, text: text)
+        case .paragraph(_, let text):
+            return .paragraph(id: newID, text: text)
+        case .unorderedList(_, let items):
+            return .unorderedList(id: newID, items: items)
+        case .orderedList(_, let items):
+            return .orderedList(id: newID, items: items)
+        case .taskList(_, let items):
+            return .taskList(id: newID, items: items)
+        case .codeBlock(_, let language, let code):
+            return .codeBlock(id: newID, language: language, code: code)
+        case .quote(_, let text):
+            return .quote(id: newID, text: text)
+        case .table(_, let headers, let rows):
+            return .table(id: newID, headers: headers, rows: rows)
+        case .image(_, let alt, let source):
+            return .image(id: newID, alt: alt, source: source)
+        case .thematicBreak:
+            return .thematicBreak(id: newID)
+        }
+    }
 }
 
 // Minimal, dependency-free Markdown block parser.
 struct MarkdownParser {
+    // Number of lines processed between cooperative cancellation checks.
+    private static let cancellationCheckStride = 4_096
+
     static func parse(_ input: String) -> [MarkdownBlock] {
+        // Non-cancellable parse never throws.
+        (try? parse(input, checkingCancellation: false)) ?? []
+    }
+
+    // Cancellable variant used by background document loads: throws
+    // CancellationError when the surrounding Task is cancelled, so stacked
+    // reloads stop wasting CPU on obsolete documents.
+    static func parse(
+        _ input: String,
+        checkingCancellation: Bool
+    ) throws -> [MarkdownBlock] {
         var blocks: [MarkdownBlock] = []
         let lines = input.replacingOccurrences(of: "\r\n", with: "\n").components(separatedBy: "\n")
         let realFences = computeRealFences(lines)
 
         var i = 0
         var paragraphBuffer: [String] = []
+        var nextCancellationCheck = cancellationCheckStride
 
         func flushParagraph() {
             if !paragraphBuffer.isEmpty {
@@ -58,6 +162,11 @@ struct MarkdownParser {
         }
 
         while i < lines.count {
+            if checkingCancellation, i >= nextCancellationCheck {
+                try Task.checkCancellation()
+                nextCancellationCheck = i + Self.cancellationCheckStride
+            }
+
             let line = lines[i]
             let trimmed = line.trimmingCharacters(in: .whitespaces)
 
@@ -191,7 +300,22 @@ struct MarkdownParser {
             i += 1
         }
         flushParagraph()
-        return blocks
+        return assignStableIDs(to: blocks)
+    }
+
+    // Derives a deterministic ID for each block from its content digest plus
+    // an occurrence counter. Identical documents produce identical ID
+    // sequences (stable view identity across reloads); duplicate blocks in
+    // one document stay distinct via the occurrence index.
+    private static func assignStableIDs(to blocks: [MarkdownBlock]) -> [MarkdownBlock] {
+        var occurrences: [UInt64: Int] = [:]
+        occurrences.reserveCapacity(blocks.count)
+        return blocks.map { block in
+            let hash = block.contentHash
+            let occurrence = occurrences[hash, default: 0]
+            occurrences[hash] = occurrence + 1
+            return block.withID("\(String(hash, radix: 16))-\(occurrence)")
+        }
     }
 
     // Determines which ``` lines are genuine code-fence delimiters.
