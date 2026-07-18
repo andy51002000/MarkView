@@ -59,3 +59,19 @@ Notepad++ 的識別核心拆成三個可借用的「概念元件」：
 - [ ] 不近似 Notepad++ logo 的形狀／配色比例／版式。
 - [ ] 生物為原創抽象設計。
 - [ ] 圖稿 commercially safe。
+
+## 9. 2026 Negative M 重設計
+
+本輪重新提出三個彼此獨立的 flat-vector 方向：藍色文件安全款
+**Blue Document**、負空間幾何款 **Negative M**、以及暖色編輯視窗款
+**Editorial Viewport**。使用者選定 Negative M 作為正式 app icon。
+
+Negative M 以深炭灰與青綠兩組幾何折帶構成緊湊的 `M` 輪廓，負空間同時暗示
+向下閱讀與文件檢視。圖形不使用動物、變色龍、舌頭或捲尾元素，採透明背景、
+強 silhouette 與純 flat 色塊，以維持 16–32px 小尺寸辨識度及 macOS Dock
+相容性。
+
+> **資產來源聲明 / Asset provenance**：本次 Negative M 圖稿為 AI 生成的
+> 原創視覺方向，生成時明確要求 commercially safe，且不得近似任何既有品牌
+> logo 或商標。正式 `Resources/AppIcon.png` 已人工移除生成圖內的偽透明棋盤格，
+> 重建為 1024×1024 真正 RGBA PNG，再衍生 `AppIcon.icns`。
