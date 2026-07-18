@@ -52,7 +52,7 @@ struct MarkdownView: View {
                 .padding(.top, level <= 2 ? 6 : 2)
 
         case .paragraph(_, let text):
-            inlineText(text)
+            InlineContentView(content: text, baseURL: baseURL, inlineCache: inlineCache)
                 .font(.body)
                 .lineSpacing(3)
 
@@ -118,8 +118,16 @@ struct MarkdownView: View {
                 }
             }
 
+        case .list(_, let items):
+            NestedListView(items: items, inlineCache: inlineCache)
+
         case .table(_, let headers, let rows):
-            TableBlockView(headers: headers, rows: rows)
+            TableBlockView(
+                headers: headers,
+                rows: rows,
+                baseURL: baseURL,
+                inlineCache: inlineCache
+            )
 
         case .image(_, let alt, let source):
             ImageBlockView(alt: alt, source: source, baseURL: baseURL)
@@ -143,5 +151,70 @@ struct MarkdownView: View {
     // served from the background-built cache when available.
     private func inlineText(_ text: String) -> Text {
         inlineMarkdownText(text, cache: inlineCache)
+    }
+}
+
+private struct NestedListView: View {
+    let items: [ListItem]
+    var inlineCache: InlineRenderCache = .empty
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(Array(items.enumerated()), id: \.offset) { index, item in
+                NestedListItemView(
+                    item: item,
+                    orderedIndex: orderedIndex(at: index),
+                    inlineCache: inlineCache
+                )
+            }
+        }
+    }
+
+    private func orderedIndex(at index: Int) -> Int? {
+        guard case .ordered = items[index].marker else { return nil }
+        return items[..<index].reduce(1) { count, item in
+            if case .ordered = item.marker { return count + 1 }
+            return count
+        }
+    }
+}
+
+private struct NestedListItemView: View {
+    let item: ListItem
+    let orderedIndex: Int?
+    var inlineCache: InlineRenderCache = .empty
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                marker
+                    .frame(minWidth: 18, alignment: .trailing)
+                inlineMarkdownText(item.text, cache: inlineCache)
+                    .font(.body)
+                    .foregroundStyle(taskChecked ? .secondary : .primary)
+            }
+            if !item.children.isEmpty {
+                NestedListView(items: item.children, inlineCache: inlineCache)
+                    .padding(.leading, 26)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var marker: some View {
+        switch item.marker {
+        case .unordered:
+            Text("•").font(.body)
+        case .ordered:
+            Text("\(orderedIndex ?? 1).").font(.body).monospacedDigit()
+        case .task(let checked):
+            Image(systemName: checked ? "checkmark.square.fill" : "square")
+                .foregroundStyle(checked ? Color.accentColor : Color.secondary)
+        }
+    }
+
+    private var taskChecked: Bool {
+        if case .task(let checked) = item.marker { return checked }
+        return false
     }
 }

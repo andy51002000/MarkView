@@ -9,11 +9,11 @@ A fast, lightweight, **native macOS Markdown viewer** built with SwiftUI — no 
 - Read-only rendering of:
   - Headings (`#`–`######`)
   - Paragraphs with inline **bold**, *italic*, `inline code`, and [links](https://example.com)
-  - Unordered and ordered lists
+  - Unordered, ordered, and task lists with mixed nested indentation
   - Fenced code blocks (```` ``` ````) with language label
   - Blockquotes
   - GitHub-style pipe tables (header separator, uneven rows handled)
-  - Images via `![alt](src)` — contained local paths and remote HTTPS images load automatically; unsafe or missing images show a fallback
+  - Standalone and inline images in paragraphs/table cells — contained local paths and remote HTTPS images load automatically; unsafe or missing images show a fallback
   - Horizontal rules
 - Manual reload with `⌘R` plus automatic refresh when the open file changes externally, including atomic saves
 - Text selection enabled
@@ -108,7 +108,7 @@ Samples/SAMPLE.md        # demo document exercising all features
 
 ## Notes / limitations
 
-- The block parser is intentionally minimal (MVP scope): nested lists are not yet rendered. Inline emphasis/links use SwiftUI's native `AttributedString(markdown:)`.
+- The block parser intentionally targets common Markdown rather than the full CommonMark specification. Inline emphasis/links use SwiftUI's native `AttributedString(markdown:)`.
 - Tables use GitHub pipe syntax and require the `| --- |` separator row under the header.
 - Remote HTTPS images load automatically; HTTP is never loaded. Local images must use paths that remain inside the opened `.md` file's directory.
 - To make a double-clickable `.app`, wrap the release binary in an app bundle (future enhancement); for the MVP, `swift run` is the fastest path.

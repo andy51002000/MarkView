@@ -2,6 +2,70 @@ import SwiftUI
 
 // MARK: - Inline rendering
 
+enum InlineSegment: Equatable, Sendable {
+    case text(String)
+    case image(alt: String, source: String)
+}
+
+func parseInlineSegments(_ input: String) -> [InlineSegment] {
+    guard input.contains("![") else { return [.text(input)] }
+
+    var segments: [InlineSegment] = []
+    var textStart = input.startIndex
+    var index = input.startIndex
+
+    func appendText(through end: String.Index) {
+        guard textStart < end else { return }
+        let text = String(input[textStart..<end])
+        if !text.isEmpty { segments.append(.text(text)) }
+    }
+
+    while index < input.endIndex {
+        if input[index] == "`", !isEscaped(index, in: input) {
+            let openerEnd = endOfBacktickRun(at: index, in: input)
+            let length = input.distance(from: index, to: openerEnd)
+            if let closerEnd = closingBacktickRun(length: length, after: openerEnd, in: input) {
+                index = closerEnd
+                continue
+            }
+            index = openerEnd
+            continue
+        }
+
+        guard input[index...].hasPrefix("!["), !isEscaped(index, in: input),
+              let parsed = parseInlineImage(at: index, in: input) else {
+            index = input.index(after: index)
+            continue
+        }
+
+        appendText(through: index)
+        segments.append(.image(alt: parsed.alt, source: parsed.source))
+        index = parsed.end
+        textStart = parsed.end
+    }
+
+    appendText(through: input.endIndex)
+    return segments.isEmpty ? [.text(input)] : segments
+}
+
+private func parseInlineImage(
+    at start: String.Index,
+    in input: String
+) -> (alt: String, source: String, end: String.Index)? {
+    let altStart = input.index(start, offsetBy: 2)
+    guard let closeBracket = input[altStart...].firstIndex(of: "]") else { return nil }
+    let openParen = input.index(after: closeBracket)
+    guard openParen < input.endIndex, input[openParen] == "(" else { return nil }
+    let sourceStart = input.index(after: openParen)
+    guard let closeParen = input[sourceStart...].firstIndex(of: ")") else { return nil }
+
+    let alt = String(input[altStart..<closeBracket])
+    let source = String(input[sourceStart..<closeParen])
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !source.isEmpty else { return nil }
+    return (alt, source, input.index(after: closeParen))
+}
+
 // Renders inline Markdown (bold/italic/code/links) with <br> normalization.
 // This is the single source of truth used both by the background cache
 // builder and by the on-demand fallback path.
@@ -46,11 +110,14 @@ struct InlineRenderCache: Sendable {
         var processed = 0
 
         func add(_ text: String) throws {
-            guard storage[text] == nil else { return }
-            storage[text] = renderInlineMarkdown(text)
-            processed += 1
-            if checkingCancellation, processed % 512 == 0 {
-                try Task.checkCancellation()
+            for segment in parseInlineSegments(text) {
+                guard case .text(let segmentText) = segment,
+                      storage[segmentText] == nil else { continue }
+                storage[segmentText] = renderInlineMarkdown(segmentText)
+                processed += 1
+                if checkingCancellation, processed % 512 == 0 {
+                    try Task.checkCancellation()
+                }
             }
         }
 
@@ -62,6 +129,14 @@ struct InlineRenderCache: Sendable {
                 for item in items { try add(item) }
             case .taskList(_, let items):
                 for item in items { try add(item.text) }
+            case .list(_, let items):
+                func addItems(_ items: [ListItem]) throws {
+                    for item in items {
+                        try add(item.text)
+                        try addItems(item.children)
+                    }
+                }
+                try addItems(items)
             case .table(_, let headers, let rows):
                 for header in headers { try add(header) }
                 for row in rows { for cell in row { try add(cell) } }
@@ -177,11 +252,39 @@ private func isEscaped(_ index: String.Index, in text: String) -> Bool {
     return backslashCount.isMultiple(of: 2) == false
 }
 
+// MARK: - Inline mixed content
+
+struct InlineContentView: View {
+    let content: String
+    let baseURL: URL?
+    var inlineCache: InlineRenderCache = .empty
+
+    var body: some View {
+        let segments = parseInlineSegments(content)
+        VStack(alignment: .leading, spacing: 4) {
+            ForEach(Array(segments.enumerated()), id: \.offset) { _, segment in
+                switch segment {
+                case .text(let text):
+                    inlineMarkdownText(text, cache: inlineCache)
+                case .image(let alt, let source):
+                    ImageBlockView(
+                        alt: alt,
+                        source: source,
+                        baseURL: baseURL,
+                        maximumHeight: 200
+                    )
+                }
+            }
+        }
+    }
+}
+
 // MARK: - Table
 
 struct TableBlockView: View {
     let headers: [String]
     let rows: [[String]]
+    var baseURL: URL? = nil
     var inlineCache: InlineRenderCache = .empty
 
     private var columnCount: Int {
@@ -236,7 +339,7 @@ struct TableBlockView: View {
     }
 
     private func cell(_ content: String) -> some View {
-        inlineMarkdownText(content)
+        InlineContentView(content: content, baseURL: baseURL, inlineCache: inlineCache)
             .font(.body)
             .padding(.horizontal, 10)
             .textSelection(.enabled)
@@ -298,6 +401,7 @@ struct ImageBlockView: View {
     let alt: String
     let source: String
     let baseURL: URL?
+    var maximumHeight: CGFloat? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -318,7 +422,7 @@ struct ImageBlockView: View {
                 Image(nsImage: nsImage)
                     .resizable()
                     .scaledToFit()
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(maxWidth: .infinity, maxHeight: maximumHeight, alignment: .leading)
             } else {
                 fallback("Cannot load local image: \(url.lastPathComponent)")
             }
@@ -331,7 +435,7 @@ struct ImageBlockView: View {
                     image
                         .resizable()
                         .scaledToFit()
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .frame(maxWidth: .infinity, maxHeight: maximumHeight, alignment: .leading)
                 case .failure:
                     fallback("Cannot load remote image")
                 @unknown default:

@@ -23,6 +23,18 @@ struct TaskItem: Hashable, Sendable {
     let text: String
 }
 
+enum ListMarker: Hashable, Sendable {
+    case unordered
+    case ordered
+    case task(checked: Bool)
+}
+
+struct ListItem: Hashable, Sendable {
+    let marker: ListMarker
+    let text: String
+    let children: [ListItem]
+}
+
 // A lightweight block-level Markdown model.
 //
 // IDs are deterministic: derived from the block's content plus an occurrence
@@ -35,6 +47,7 @@ enum MarkdownBlock: Identifiable, Sendable {
     case unorderedList(id: String = "", items: [String])
     case orderedList(id: String = "", items: [String])
     case taskList(id: String = "", items: [TaskItem])
+    case list(id: String = "", items: [ListItem])
     case codeBlock(id: String = "", language: String?, code: String)
     case quote(id: String = "", text: String)
     case table(id: String = "", headers: [String], rows: [[String]])
@@ -48,6 +61,7 @@ enum MarkdownBlock: Identifiable, Sendable {
              .unorderedList(let id, _),
              .orderedList(let id, _),
              .taskList(let id, _),
+             .list(let id, _),
              .codeBlock(let id, _, _),
              .quote(let id, _),
              .table(let id, _, _),
@@ -79,6 +93,9 @@ enum MarkdownBlock: Identifiable, Sendable {
                 h.combine(byte: item.checked ? 1 : 0)
                 h.combine(item.text); h.combine(byte: 0x1F)
             }
+        case .list(_, let items):
+            h.combine(byte: 0x0B)
+            combine(items, into: &h)
         case .codeBlock(_, let language, let code):
             h.combine(byte: 0x06); h.combine(language ?? ""); h.combine(byte: 0x1E); h.combine(code)
         case .quote(_, let text):
@@ -99,6 +116,23 @@ enum MarkdownBlock: Identifiable, Sendable {
         return h.value
     }
 
+    private func combine(_ items: [ListItem], into hasher: inout FNV1a) {
+        for item in items {
+            switch item.marker {
+            case .unordered:
+                hasher.combine(byte: 0x01)
+            case .ordered:
+                hasher.combine(byte: 0x02)
+            case .task(let checked):
+                hasher.combine(byte: checked ? 0x04 : 0x03)
+            }
+            hasher.combine(item.text)
+            hasher.combine(byte: 0x1E)
+            combine(item.children, into: &hasher)
+            hasher.combine(byte: 0x1D)
+        }
+    }
+
     func withID(_ newID: String) -> MarkdownBlock {
         switch self {
         case .heading(_, let level, let text):
@@ -111,6 +145,8 @@ enum MarkdownBlock: Identifiable, Sendable {
             return .orderedList(id: newID, items: items)
         case .taskList(_, let items):
             return .taskList(id: newID, items: items)
+        case .list(_, let items):
+            return .list(id: newID, items: items)
         case .codeBlock(_, let language, let code):
             return .codeBlock(id: newID, language: language, code: code)
         case .quote(_, let text):
@@ -253,45 +289,17 @@ struct MarkdownParser {
                 continue
             }
 
-            // Task list (- [ ] / - [x]) — must be checked before plain lists.
-            if parseTaskItem(trimmed) != nil {
+            // Consecutive list lines are parsed together so indentation and
+            // mixed marker types can form a nested tree. Flat homogeneous runs
+            // keep the legacy block cases for compatibility and fast rendering.
+            if parseListLine(line) != nil {
                 flushParagraph()
-                var items: [TaskItem] = []
-                while i < lines.count {
-                    let t = lines[i].trimmingCharacters(in: .whitespaces)
-                    guard let item = parseTaskItem(t) else { break }
-                    items.append(item)
+                var listLines: [ParsedListLine] = []
+                while i < lines.count, let parsed = parseListLine(lines[i]) {
+                    listLines.append(parsed)
                     i += 1
                 }
-                blocks.append(.taskList(items: items))
-                continue
-            }
-
-            // Unordered list
-            if isUnorderedItem(trimmed) {
-                flushParagraph()
-                var items: [String] = []
-                while i < lines.count {
-                    let t = lines[i].trimmingCharacters(in: .whitespaces)
-                    guard isUnorderedItem(t), parseTaskItem(t) == nil else { break }
-                    items.append(stripUnorderedMarker(t))
-                    i += 1
-                }
-                blocks.append(.unorderedList(items: items))
-                continue
-            }
-
-            // Ordered list
-            if isOrderedItem(trimmed) {
-                flushParagraph()
-                var items: [String] = []
-                while i < lines.count {
-                    let t = lines[i].trimmingCharacters(in: .whitespaces)
-                    guard isOrderedItem(t) else { break }
-                    items.append(stripOrderedMarker(t))
-                    i += 1
-                }
-                blocks.append(.orderedList(items: items))
+                blocks.append(contentsOf: makeListBlocks(from: listLines))
                 continue
             }
 
@@ -380,6 +388,169 @@ struct MarkdownParser {
         guard level > 0, idx < line.endIndex, line[idx] == " " else { return nil }
         let text = String(line[idx...]).trimmingCharacters(in: .whitespaces)
         return .heading(level: level, text: text)
+    }
+
+    private struct ParsedListLine {
+        let indent: Int
+        let marker: ListMarker
+        let text: String
+    }
+
+    private struct MutableListItem {
+        let marker: ListMarker
+        let text: String
+        var children: [MutableListItem]
+
+        var value: ListItem {
+            ListItem(marker: marker, text: text, children: children.map(\.value))
+        }
+    }
+
+    private static func parseListLine(_ line: String) -> ParsedListLine? {
+        var index = line.startIndex
+        var indent = 0
+        while index < line.endIndex {
+            if line[index] == " " {
+                indent += 1
+            } else if line[index] == "\t" {
+                indent += 4
+            } else {
+                break
+            }
+            index = line.index(after: index)
+        }
+
+        let content = String(line[index...])
+        if let task = parseTaskItem(content) {
+            return ParsedListLine(
+                indent: indent,
+                marker: .task(checked: task.checked),
+                text: task.text
+            )
+        }
+        if isUnorderedItem(content) {
+            return ParsedListLine(
+                indent: indent,
+                marker: .unordered,
+                text: stripUnorderedMarker(content)
+            )
+        }
+        if isOrderedItem(content) {
+            return ParsedListLine(
+                indent: indent,
+                marker: .ordered,
+                text: stripOrderedMarker(content)
+            )
+        }
+        return nil
+    }
+
+    private static func makeListBlocks(from lines: [ParsedListLine]) -> [MarkdownBlock] {
+        guard let first = lines.first else { return [] }
+        let hasNestedItem = lines.contains { $0.indent > first.indent }
+        let markers = Set(lines.map(\.marker))
+
+        if !hasNestedItem, markers.count == 1 {
+            switch first.marker {
+            case .unordered:
+                return [.unorderedList(items: lines.map(\.text))]
+            case .ordered:
+                return [.orderedList(items: lines.map(\.text))]
+            case .task:
+                let tasks = lines.compactMap { line -> TaskItem? in
+                    guard case .task(let checked) = line.marker else { return nil }
+                    return TaskItem(checked: checked, text: line.text)
+                }
+                return [.taskList(items: tasks)]
+            }
+        }
+
+        if !hasNestedItem {
+            var blocks: [MarkdownBlock] = []
+            var start = 0
+            while start < lines.count {
+                let marker = lines[start].marker
+                var end = start + 1
+                while end < lines.count, sameListKind(lines[end].marker, marker) {
+                    end += 1
+                }
+                let run = Array(lines[start..<end])
+                switch marker {
+                case .unordered:
+                    blocks.append(.unorderedList(items: run.map(\.text)))
+                case .ordered:
+                    blocks.append(.orderedList(items: run.map(\.text)))
+                case .task:
+                    blocks.append(.taskList(items: run.compactMap { line in
+                        guard case .task(let checked) = line.marker else { return nil }
+                        return TaskItem(checked: checked, text: line.text)
+                    }))
+                }
+                start = end
+            }
+            return blocks
+        }
+
+        var roots: [MutableListItem] = []
+        var path: [Int] = []
+        var indentStack: [Int] = []
+
+        for line in lines {
+            while let lastIndent = indentStack.last, line.indent <= lastIndent {
+                indentStack.removeLast()
+                path.removeLast()
+            }
+
+            let item = MutableListItem(marker: line.marker, text: line.text, children: [])
+            if path.isEmpty {
+                roots.append(item)
+                path = [roots.count - 1]
+                indentStack = [line.indent]
+            } else {
+                append(item, to: &roots, parentPath: path)
+                path.append(childCount(in: roots, at: path) - 1)
+                indentStack.append(line.indent)
+            }
+        }
+
+        return [.list(items: roots.map(\.value))]
+    }
+
+    private static func sameListKind(_ lhs: ListMarker, _ rhs: ListMarker) -> Bool {
+        switch (lhs, rhs) {
+        case (.unordered, .unordered), (.ordered, .ordered), (.task, .task): return true
+        default: return false
+        }
+    }
+
+    private static func append(
+        _ item: MutableListItem,
+        to roots: inout [MutableListItem],
+        parentPath: [Int]
+    ) {
+        func appendRecursively(
+            _ item: MutableListItem,
+            to items: inout [MutableListItem],
+            path: ArraySlice<Int>
+        ) {
+            guard let index = path.first else { return }
+            if path.count == 1 {
+                items[index].children.append(item)
+            } else {
+                appendRecursively(item, to: &items[index].children, path: path.dropFirst())
+            }
+        }
+        appendRecursively(item, to: &roots, path: parentPath[...])
+    }
+
+    private static func childCount(in roots: [MutableListItem], at path: [Int]) -> Int {
+        var items = roots
+        var current: MutableListItem?
+        for index in path {
+            current = items[index]
+            items = current?.children ?? []
+        }
+        return current?.children.count ?? 0
     }
 
     private static func isUnorderedItem(_ line: String) -> Bool {
