@@ -66,13 +66,14 @@ enum QuickLookRenderer {
     private static func render(_ block: MarkdownBlock, baseURL: URL?) -> NSAttributedString {
         switch block {
         case .heading(_, let level, let text):
+            // Mirrors ReadingSpacing.headingTopMajor/Minor in the app view.
             return withParagraphSpacing(
                 inline(text, font: Fonts.heading(level), baseURL: baseURL),
-                spacingBefore: level <= 2 ? 10 : 6
+                spacingBefore: level <= 2 ? 16 : 8
             )
 
         case .paragraph(_, let text):
-            return inline(text, font: Fonts.base, baseURL: baseURL)
+            return withBodySpacing(inline(text, font: Fonts.base, baseURL: baseURL))
 
         case .unorderedList(_, let items):
             return renderList(items.map { ListItem(marker: .unordered, text: $0, children: []) },
@@ -341,7 +342,21 @@ enum QuickLookRenderer {
         let m = NSMutableAttributedString(attributedString: attributed)
         let style = NSMutableParagraphStyle()
         style.paragraphSpacingBefore = spacingBefore
-        style.paragraphSpacing = 4
+        style.paragraphSpacing = 6
+        m.addAttribute(.paragraphStyle, value: style,
+                       range: NSRange(location: 0, length: m.length))
+        return m
+    }
+
+    // Body-text spacing mirroring ReadingSpacing.line/block in the app view:
+    // looser leading for comfortable long-form (and CJK) reading.
+    private static func withBodySpacing(
+        _ attributed: NSAttributedString
+    ) -> NSAttributedString {
+        let m = NSMutableAttributedString(attributedString: attributed)
+        let style = NSMutableParagraphStyle()
+        style.lineSpacing = 5
+        style.paragraphSpacing = 10
         m.addAttribute(.paragraphStyle, value: style,
                        range: NSRange(location: 0, length: m.length))
         return m

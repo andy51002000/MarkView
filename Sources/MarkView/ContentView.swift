@@ -28,7 +28,7 @@ struct ContentView: View {
             .keyboardShortcut("r", modifiers: [.command])
             .disabled(store.fileURL == nil)
 
-            CopyFeedbackButton(title: "Get Path", systemImage: "doc.on.clipboard") {
+            CopyFeedbackButton(title: "Copy Path", systemImage: "doc.on.clipboard") {
                 store.copyPath()
             }
             .disabled(store.fileURL == nil)

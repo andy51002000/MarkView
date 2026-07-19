@@ -1,5 +1,26 @@
 import SwiftUI
 
+// Centralized reading-typography constants. Tuned for comfortable long-form
+// reading (including CJK text, which needs looser leading than Latin).
+// The Quick Look renderer mirrors these values — adjust both together.
+enum ReadingSpacing {
+    /// Vertical gap between top-level blocks (paragraph → paragraph, etc.).
+    static let block: CGFloat = 18
+    /// Extra leading between wrapped lines inside a paragraph/quote.
+    /// ~5pt on a 13pt body approximates a 1.4x effective line height.
+    static let line: CGFloat = 5
+    /// Vertical gap between items of the same list.
+    static let listItem: CGFloat = 9
+    /// Horizontal gap between a list marker (bullet/number/checkbox) and text.
+    static let listMarkerGap: CGFloat = 10
+    /// Indentation for each nested list level.
+    static let nestedIndent: CGFloat = 28
+    /// Extra space above major headings (h1/h2) separating sections.
+    static let headingTopMajor: CGFloat = 16
+    /// Extra space above minor headings (h3+).
+    static let headingTopMinor: CGFloat = 8
+}
+
 // A contiguous run of blocks rendered as one lazy row. Chunking keeps the
 // outer lazy list small (hundreds of rows instead of hundreds of thousands),
 // which avoids exhausting SwiftUI's attribute graph on huge documents while
@@ -49,29 +70,30 @@ struct MarkdownView: View {
             inlineText(text)
                 .font(headingFont(level))
                 .fontWeight(.bold)
-                .padding(.top, level <= 2 ? 6 : 2)
+                .padding(.top, level <= 2 ? ReadingSpacing.headingTopMajor
+                                          : ReadingSpacing.headingTopMinor)
 
         case .paragraph(_, let text):
             InlineContentView(content: text, baseURL: baseURL, inlineCache: inlineCache)
                 .font(.body)
-                .lineSpacing(3)
+                .lineSpacing(ReadingSpacing.line)
 
         case .unorderedList(_, let items):
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: ReadingSpacing.listItem) {
                 ForEach(Array(items.enumerated()), id: \.offset) { _, item in
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    HStack(alignment: .firstTextBaseline, spacing: ReadingSpacing.listMarkerGap) {
                         Text("•").font(.body)
-                        inlineText(item).font(.body)
+                        inlineText(item).font(.body).lineSpacing(ReadingSpacing.line)
                     }
                 }
             }
 
         case .orderedList(_, let items):
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: ReadingSpacing.listItem) {
                 ForEach(Array(items.enumerated()), id: \.offset) { idx, item in
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    HStack(alignment: .firstTextBaseline, spacing: ReadingSpacing.listMarkerGap) {
                         Text("\(idx + 1).").font(.body).monospacedDigit()
-                        inlineText(item).font(.body)
+                        inlineText(item).font(.body).lineSpacing(ReadingSpacing.line)
                     }
                 }
             }
@@ -159,7 +181,7 @@ private struct NestedListView: View {
     var inlineCache: InlineRenderCache = .empty
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: ReadingSpacing.listItem) {
             ForEach(Array(items.enumerated()), id: \.offset) { index, item in
                 NestedListItemView(
                     item: item,
@@ -185,17 +207,18 @@ private struct NestedListItemView: View {
     var inlineCache: InlineRenderCache = .empty
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
+        VStack(alignment: .leading, spacing: ReadingSpacing.listItem) {
+            HStack(alignment: .firstTextBaseline, spacing: ReadingSpacing.listMarkerGap) {
                 marker
                     .frame(minWidth: 18, alignment: .trailing)
                 inlineMarkdownText(item.text, cache: inlineCache)
                     .font(.body)
+                    .lineSpacing(ReadingSpacing.line)
                     .foregroundStyle(taskChecked ? .secondary : .primary)
             }
             if !item.children.isEmpty {
                 NestedListView(items: item.children, inlineCache: inlineCache)
-                    .padding(.leading, 26)
+                    .padding(.leading, ReadingSpacing.nestedIndent)
             }
         }
     }
