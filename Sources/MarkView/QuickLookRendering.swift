@@ -39,12 +39,15 @@ enum QuickLookRenderer {
     // MARK: - Fonts / constants
 
     enum Fonts {
-        static let base = NSFont.systemFont(ofSize: 13)
-        static let mono = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+        // Mirrors ReadingTypography (Atlassian Design System mapping):
+        // body 15pt, minor-third heading scale, smaller mono for code.
+        static let base = NSFont.systemFont(ofSize: ReadingTypography.bodySize)
+        static let mono = NSFont.monospacedSystemFont(
+            ofSize: ReadingTypography.codeSize, weight: .regular)
 
         static func heading(_ level: Int) -> NSFont {
-            let sizes: [CGFloat] = [24, 20, 17, 15, 13.5, 13]
-            let size = sizes[min(max(level, 1), 6) - 1]
+            let sizes = ReadingTypography.headingSizes
+            let size = sizes[min(max(level, 1), sizes.count) - 1]
             return NSFont.boldSystemFont(ofSize: size)
         }
 
@@ -348,15 +351,16 @@ enum QuickLookRenderer {
         return m
     }
 
-    // Body-text spacing mirroring ReadingSpacing.line/block in the app view:
-    // looser leading for comfortable long-form (and CJK) reading.
+    // Body-text spacing mirroring ReadingTypography.line/block in the app
+    // view: ~1.5x line height and 1.0x-font-size paragraph gap (Atlassian
+    // Body L rhythm used by Confluence).
     private static func withBodySpacing(
         _ attributed: NSAttributedString
     ) -> NSAttributedString {
         let m = NSMutableAttributedString(attributedString: attributed)
         let style = NSMutableParagraphStyle()
-        style.lineSpacing = 5
-        style.paragraphSpacing = 10
+        style.lineSpacing = ReadingTypography.line
+        style.paragraphSpacing = ReadingTypography.block - 4
         m.addAttribute(.paragraphStyle, value: style,
                        range: NSRange(location: 0, length: m.length))
         return m

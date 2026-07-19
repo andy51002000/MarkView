@@ -340,7 +340,7 @@ struct TableBlockView: View {
 
     private func cell(_ content: String) -> some View {
         InlineContentView(content: content, baseURL: baseURL, inlineCache: inlineCache)
-            .font(.body)
+            .font(ReadingTypography.bodyFont)
             .padding(.horizontal, 10)
             .textSelection(.enabled)
     }

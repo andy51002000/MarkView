@@ -63,8 +63,9 @@ struct ContentView: View {
                     baseURL: store.baseURL,
                     inlineCache: store.inlineCache
                 )
-                .padding(24)
-                .frame(maxWidth: 760, alignment: .leading)
+                .padding(.horizontal, 32)
+                .padding(.vertical, 28)
+                .frame(maxWidth: ReadingTypography.contentMaxWidth, alignment: .leading)
                 .frame(maxWidth: .infinity, alignment: .center)
             }
         }
