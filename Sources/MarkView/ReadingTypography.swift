@@ -87,6 +87,12 @@ struct ReadingMetrics: Equatable {
     /// The reading column grows with zoom so zoomed text keeps the same
     /// characters-per-line rhythm instead of wrapping ever tighter.
     var contentMaxWidth: CGFloat { ReadingTypography.contentMaxWidth * zoom }
+    /// Blockquote accent bar: 3pt at 100%, scaled with zoom but kept
+    /// within sane bounds so it neither vanishes at 50% nor dominates at 300%.
+    var quoteBarWidth: CGFloat { min(max(3 * zoom, 2), 6) }
+    /// Vertical divider between table cells: matches one line of body text
+    /// (bodySize + line leading) instead of a fixed 18pt, so it tracks zoom.
+    var tableDividerHeight: CGFloat { bodySize + line }
 
     var bodyFont: Font { .system(size: bodySize) }
     var codeFont: Font { .system(size: codeSize, design: .monospaced) }

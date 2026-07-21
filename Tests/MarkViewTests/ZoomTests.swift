@@ -113,6 +113,32 @@ import Testing
         #expect(m.contentMaxWidth == ReadingTypography.contentMaxWidth)
     }
 
+    // Review regression guards: these dimensions were once hard-coded
+    // (760 / 18 / 3) and did not track zoom.
+    @Test func contentColumnScalesWithZoom() {
+        #expect(ReadingTypography.metrics(zoom: 1.0).contentMaxWidth == 760)
+        #expect(ReadingTypography.metrics(zoom: 3.0).contentMaxWidth == 2280,
+                "300% zoom must widen the column 3x to keep chars/line")
+        #expect(ReadingTypography.metrics(zoom: 0.5).contentMaxWidth == 380)
+    }
+
+    @Test func tableDividerTracksBodyLine() {
+        let base = ReadingTypography.metrics(zoom: 1.0)
+        #expect(base.tableDividerHeight == base.bodySize + base.line,
+                "divider = one body line, not a fixed 18pt")
+        let zoomed = ReadingTypography.metrics(zoom: 3.0)
+        #expect(zoomed.tableDividerHeight == base.tableDividerHeight * 3)
+    }
+
+    @Test func quoteBarScalesWithinBounds() {
+        #expect(ReadingTypography.metrics(zoom: 1.0).quoteBarWidth == 3)
+        #expect(ReadingTypography.metrics(zoom: 0.5).quoteBarWidth == 2,
+                "min clamp keeps the bar visible at 50%")
+        #expect(ReadingTypography.metrics(zoom: 3.0).quoteBarWidth == 6,
+                "max clamp keeps the bar tasteful at 300%")
+        #expect(ReadingTypography.metrics(zoom: 1.5).quoteBarWidth == 4.5)
+    }
+
     // Architecture guarantee: zoom must not re-parse or disturb block
     // identity / cache contents. Parsing the same document before and
     // after computing metrics yields identical IDs, and the inline cache

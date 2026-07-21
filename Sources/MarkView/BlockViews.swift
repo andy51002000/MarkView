@@ -317,7 +317,7 @@ struct TableBlockView: View {
                     .font(m.bodyFont.bold())
                     .frame(maxWidth: .infinity, alignment: .leading)
                 if col < columnCount - 1 {
-                    Divider().frame(height: 18)
+                    Divider().frame(height: m.tableDividerHeight)
                 }
             }
         }
@@ -331,7 +331,7 @@ struct TableBlockView: View {
                 cell(col < row.count ? row[col] : "")
                     .frame(maxWidth: .infinity, alignment: .leading)
                 if col < columnCount - 1 {
-                    Divider().frame(height: 18)
+                    Divider().frame(height: m.tableDividerHeight)
                 }
             }
         }

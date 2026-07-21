@@ -63,6 +63,7 @@ struct ContentView: View {
             .buttonStyle(.borderless)
             .disabled(!zoom.canZoomOut)
             .help("Zoom out (⌘−)")
+            .accessibilityLabel("Zoom Out")
 
             Button {
                 zoom.reset()
@@ -73,6 +74,9 @@ struct ContentView: View {
             }
             .buttonStyle(.borderless)
             .help("Reset zoom to 100% (⌘0)")
+            .accessibilityLabel("Reset Zoom")
+            .accessibilityValue(zoom.percentText)
+            .accessibilityIdentifier("zoom-reset")
 
             Button {
                 zoom.zoomIn()
@@ -82,6 +86,7 @@ struct ContentView: View {
             .buttonStyle(.borderless)
             .disabled(!zoom.canZoomIn)
             .help("Zoom in (⌘+)")
+            .accessibilityLabel("Zoom In")
         }
         .padding(.horizontal, 4)
     }
@@ -95,15 +100,20 @@ struct ContentView: View {
                        title: "Open a Markdown file to preview it",
                        subtitle: "⌘O — supports .md and .markdown")
         } else {
+            // Metrics derived here (not from the toolbar's environment scope)
+            // so the reading column scales with the zoom factor: at 300% the
+            // column is 3x wide, preserving characters-per-line rhythm.
+            let metrics = ReadingTypography.metrics(zoom: zoom.scale)
             ScrollView {
                 MarkdownView(
                     blocks: store.blocks,
                     baseURL: store.baseURL,
                     inlineCache: store.inlineCache
                 )
+                .environment(\.readingMetrics, metrics)
                 .padding(.horizontal, 32)
                 .padding(.vertical, 28)
-                .frame(maxWidth: ReadingTypography.contentMaxWidth, alignment: .leading)
+                .frame(maxWidth: metrics.contentMaxWidth, alignment: .leading)
                 .frame(maxWidth: .infinity, alignment: .center)
             }
         }

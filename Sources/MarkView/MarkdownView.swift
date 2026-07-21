@@ -100,7 +100,7 @@ struct MarkdownView: View {
             HStack(spacing: 10) {
                 Rectangle()
                     .fill(Color.secondary.opacity(0.4))
-                    .frame(width: 3)
+                    .frame(width: m.quoteBarWidth)
                 inlineText(text)
                     .font(m.bodyFont)
                     .lineSpacing(m.line)
@@ -112,6 +112,7 @@ struct MarkdownView: View {
                 ForEach(Array(items.enumerated()), id: \.offset) { _, item in
                     HStack(alignment: .firstTextBaseline, spacing: m.listMarkerGap) {
                         Image(systemName: item.checked ? "checkmark.square.fill" : "square")
+                            .font(m.bodyFont)
                             .foregroundStyle(item.checked ? Color.accentColor : Color.secondary)
                         inlineText(item.text)
                             .font(m.bodyFont)
@@ -204,6 +205,7 @@ private struct NestedListItemView: View {
             Text("\(orderedIndex ?? 1).").font(m.bodyFont).monospacedDigit()
         case .task(let checked):
             Image(systemName: checked ? "checkmark.square.fill" : "square")
+                .font(m.bodyFont)
                 .foregroundStyle(checked ? Color.accentColor : Color.secondary)
         }
     }
