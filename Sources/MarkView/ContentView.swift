@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject private var store: DocumentStore
+    @EnvironmentObject private var zoom: ZoomModel
 
     var body: some View {
         VStack(spacing: 0) {
@@ -40,12 +41,49 @@ struct ContentView: View {
 
             Spacer()
 
+            zoomControl
+
             Text(store.fileName.isEmpty ? "No file" : store.fileName)
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
         }
         .padding(10)
+    }
+
+    // Compact browser-style zoom control: − / percentage / +.
+    // Clicking the percentage resets to 100%.
+    private var zoomControl: some View {
+        HStack(spacing: 2) {
+            Button {
+                zoom.zoomOut()
+            } label: {
+                Image(systemName: "minus.magnifyingglass")
+            }
+            .buttonStyle(.borderless)
+            .disabled(!zoom.canZoomOut)
+            .help("Zoom out (⌘−)")
+
+            Button {
+                zoom.reset()
+            } label: {
+                Text(zoom.percentText)
+                    .font(.callout.monospacedDigit())
+                    .frame(minWidth: 44)
+            }
+            .buttonStyle(.borderless)
+            .help("Reset zoom to 100% (⌘0)")
+
+            Button {
+                zoom.zoomIn()
+            } label: {
+                Image(systemName: "plus.magnifyingglass")
+            }
+            .buttonStyle(.borderless)
+            .disabled(!zoom.canZoomIn)
+            .help("Zoom in (⌘+)")
+        }
+        .padding(.horizontal, 4)
     }
 
     @ViewBuilder

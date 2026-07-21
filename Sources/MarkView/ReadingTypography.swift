@@ -61,6 +61,43 @@ enum ReadingTypography {
     static func headingFont(_ level: Int) -> Font {
         .system(size: headingSizes[min(max(level, 1), headingSizes.count) - 1])
     }
+
+    /// Zoom-scaled metrics for the view layer. Pure value computation —
+    /// no parsing, no cache interaction, cheap enough to derive per render.
+    static func metrics(zoom: CGFloat) -> ReadingMetrics {
+        ReadingMetrics(zoom: zoom)
+    }
+}
+
+// All typography/layout tokens scaled by the current zoom factor.
+// Views read these instead of the raw statics so browser-style zoom
+// (⌘+/⌘−/⌘0) scales text and rhythm together.
+struct ReadingMetrics: Equatable {
+    let zoom: CGFloat
+
+    var bodySize: CGFloat { ReadingTypography.bodySize * zoom }
+    var codeSize: CGFloat { ReadingTypography.codeSize * zoom }
+    var line: CGFloat { ReadingTypography.line * zoom }
+    var block: CGFloat { ReadingTypography.block * zoom }
+    var headingTopMajor: CGFloat { ReadingTypography.headingTopMajor * zoom }
+    var headingTopMinor: CGFloat { ReadingTypography.headingTopMinor * zoom }
+    var listItem: CGFloat { ReadingTypography.listItem * zoom }
+    var listMarkerGap: CGFloat { ReadingTypography.listMarkerGap * zoom }
+    var nestedIndent: CGFloat { ReadingTypography.nestedIndent * zoom }
+    /// The reading column grows with zoom so zoomed text keeps the same
+    /// characters-per-line rhythm instead of wrapping ever tighter.
+    var contentMaxWidth: CGFloat { ReadingTypography.contentMaxWidth * zoom }
+
+    var bodyFont: Font { .system(size: bodySize) }
+    var codeFont: Font { .system(size: codeSize, design: .monospaced) }
+    func headingFont(_ level: Int) -> Font {
+        let sizes = ReadingTypography.headingSizes
+        return .system(size: sizes[min(max(level, 1), sizes.count) - 1] * zoom)
+    }
+    func headingSize(_ level: Int) -> CGFloat {
+        let sizes = ReadingTypography.headingSizes
+        return sizes[min(max(level, 1), sizes.count) - 1] * zoom
+    }
 }
 
 // Backward-compatible alias used across views.

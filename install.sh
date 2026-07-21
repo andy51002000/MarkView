@@ -25,6 +25,7 @@ QL_SOURCES=(
     "$PROJECT_DIR/Sources/MarkView/BlockViews.swift"
     "$PROJECT_DIR/Sources/MarkView/QuickLookRendering.swift"
     "$PROJECT_DIR/Sources/MarkView/ReadingTypography.swift"
+    "$PROJECT_DIR/Sources/MarkView/ZoomModel.swift"
 )
 swiftc -O -parse-as-library -application-extension \
     -module-name "$QL_NAME" \

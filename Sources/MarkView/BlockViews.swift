@@ -286,6 +286,7 @@ struct TableBlockView: View {
     let rows: [[String]]
     var baseURL: URL? = nil
     var inlineCache: InlineRenderCache = .empty
+    @Environment(\.readingMetrics) private var m
 
     private var columnCount: Int {
         max(headers.count, rows.map(\.count).max() ?? 0)
@@ -313,7 +314,7 @@ struct TableBlockView: View {
         HStack(spacing: 0) {
             ForEach(0..<columnCount, id: \.self) { col in
                 cell(col < headers.count ? headers[col] : "")
-                    .font(.body.bold())
+                    .font(m.bodyFont.bold())
                     .frame(maxWidth: .infinity, alignment: .leading)
                 if col < columnCount - 1 {
                     Divider().frame(height: 18)
@@ -340,7 +341,7 @@ struct TableBlockView: View {
 
     private func cell(_ content: String) -> some View {
         InlineContentView(content: content, baseURL: baseURL, inlineCache: inlineCache)
-            .font(ReadingTypography.bodyFont)
+            .font(m.bodyFont)
             .padding(.horizontal, 10)
             .textSelection(.enabled)
     }

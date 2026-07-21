@@ -13,6 +13,7 @@ struct MarkdownView: View {
     let blocks: [MarkdownBlock]
     var baseURL: URL? = nil
     var inlineCache: InlineRenderCache = .empty
+    @Environment(\.readingMetrics) private var m
 
     private static let chunkSize = 64
 
@@ -28,9 +29,9 @@ struct MarkdownView: View {
     var body: some View {
         // Lazy at chunk granularity: only chunks near the viewport are
         // instantiated, so large documents stay responsive.
-        LazyVStack(alignment: .leading, spacing: 14) {
+        LazyVStack(alignment: .leading, spacing: m.block) {
             ForEach(chunks) { chunk in
-                VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: m.block) {
                     ForEach(chunk.blocks) { block in
                         blockView(block)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -47,32 +48,31 @@ struct MarkdownView: View {
         switch block {
         case .heading(_, let level, let text):
             inlineText(text)
-                .font(headingFont(level))
+                .font(m.headingFont(level))
                 .fontWeight(.bold)
-                .padding(.top, level <= 2 ? ReadingSpacing.headingTopMajor
-                                          : ReadingSpacing.headingTopMinor)
+                .padding(.top, level <= 2 ? m.headingTopMajor : m.headingTopMinor)
 
         case .paragraph(_, let text):
             InlineContentView(content: text, baseURL: baseURL, inlineCache: inlineCache)
-                .font(ReadingTypography.bodyFont)
-                .lineSpacing(ReadingSpacing.line)
+                .font(m.bodyFont)
+                .lineSpacing(m.line)
 
         case .unorderedList(_, let items):
-            VStack(alignment: .leading, spacing: ReadingSpacing.listItem) {
+            VStack(alignment: .leading, spacing: m.listItem) {
                 ForEach(Array(items.enumerated()), id: \.offset) { _, item in
-                    HStack(alignment: .firstTextBaseline, spacing: ReadingSpacing.listMarkerGap) {
-                        Text("•").font(ReadingTypography.bodyFont)
-                        inlineText(item).font(ReadingTypography.bodyFont).lineSpacing(ReadingSpacing.line)
+                    HStack(alignment: .firstTextBaseline, spacing: m.listMarkerGap) {
+                        Text("•").font(m.bodyFont)
+                        inlineText(item).font(m.bodyFont).lineSpacing(m.line)
                     }
                 }
             }
 
         case .orderedList(_, let items):
-            VStack(alignment: .leading, spacing: ReadingSpacing.listItem) {
+            VStack(alignment: .leading, spacing: m.listItem) {
                 ForEach(Array(items.enumerated()), id: \.offset) { idx, item in
-                    HStack(alignment: .firstTextBaseline, spacing: ReadingSpacing.listMarkerGap) {
-                        Text("\(idx + 1).").font(ReadingTypography.bodyFont).monospacedDigit()
-                        inlineText(item).font(ReadingTypography.bodyFont).lineSpacing(ReadingSpacing.line)
+                    HStack(alignment: .firstTextBaseline, spacing: m.listMarkerGap) {
+                        Text("\(idx + 1).").font(m.bodyFont).monospacedDigit()
+                        inlineText(item).font(m.bodyFont).lineSpacing(m.line)
                     }
                 }
             }
@@ -85,7 +85,7 @@ struct MarkdownView: View {
                         .foregroundStyle(.secondary)
                 }
                 Text(code)
-                    .font(.system(size: ReadingTypography.codeSize, design: .monospaced))
+                    .font(m.codeFont)
                     .textSelection(.enabled)
                     .padding(10)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -102,18 +102,19 @@ struct MarkdownView: View {
                     .fill(Color.secondary.opacity(0.4))
                     .frame(width: 3)
                 inlineText(text)
-                    .font(ReadingTypography.bodyFont)
+                    .font(m.bodyFont)
+                    .lineSpacing(m.line)
                     .foregroundStyle(.secondary)
             }
 
         case .taskList(_, let items):
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: m.listItem) {
                 ForEach(Array(items.enumerated()), id: \.offset) { _, item in
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    HStack(alignment: .firstTextBaseline, spacing: m.listMarkerGap) {
                         Image(systemName: item.checked ? "checkmark.square.fill" : "square")
                             .foregroundStyle(item.checked ? Color.accentColor : Color.secondary)
                         inlineText(item.text)
-                            .font(ReadingTypography.bodyFont)
+                            .font(m.bodyFont)
                             .foregroundStyle(item.checked ? .secondary : .primary)
                     }
                 }
@@ -138,11 +139,6 @@ struct MarkdownView: View {
         }
     }
 
-    // Atlassian minor-third heading scale via ReadingTypography tokens.
-    private func headingFont(_ level: Int) -> Font {
-        ReadingTypography.headingFont(level)
-    }
-
     // Uses SwiftUI's native inline Markdown for bold/italic/code/links,
     // served from the background-built cache when available.
     private func inlineText(_ text: String) -> Text {
@@ -153,9 +149,10 @@ struct MarkdownView: View {
 private struct NestedListView: View {
     let items: [ListItem]
     var inlineCache: InlineRenderCache = .empty
+    @Environment(\.readingMetrics) private var m
 
     var body: some View {
-        VStack(alignment: .leading, spacing: ReadingSpacing.listItem) {
+        VStack(alignment: .leading, spacing: m.listItem) {
             ForEach(Array(items.enumerated()), id: \.offset) { index, item in
                 NestedListItemView(
                     item: item,
@@ -179,20 +176,21 @@ private struct NestedListItemView: View {
     let item: ListItem
     let orderedIndex: Int?
     var inlineCache: InlineRenderCache = .empty
+    @Environment(\.readingMetrics) private var m
 
     var body: some View {
-        VStack(alignment: .leading, spacing: ReadingSpacing.listItem) {
-            HStack(alignment: .firstTextBaseline, spacing: ReadingSpacing.listMarkerGap) {
+        VStack(alignment: .leading, spacing: m.listItem) {
+            HStack(alignment: .firstTextBaseline, spacing: m.listMarkerGap) {
                 marker
                     .frame(minWidth: 18, alignment: .trailing)
                 inlineMarkdownText(item.text, cache: inlineCache)
-                    .font(ReadingTypography.bodyFont)
-                    .lineSpacing(ReadingSpacing.line)
+                    .font(m.bodyFont)
+                    .lineSpacing(m.line)
                     .foregroundStyle(taskChecked ? .secondary : .primary)
             }
             if !item.children.isEmpty {
                 NestedListView(items: item.children, inlineCache: inlineCache)
-                    .padding(.leading, ReadingSpacing.nestedIndent)
+                    .padding(.leading, m.nestedIndent)
             }
         }
     }
@@ -201,9 +199,9 @@ private struct NestedListItemView: View {
     private var marker: some View {
         switch item.marker {
         case .unordered:
-            Text("•").font(ReadingTypography.bodyFont)
+            Text("•").font(m.bodyFont)
         case .ordered:
-            Text("\(orderedIndex ?? 1).").font(ReadingTypography.bodyFont).monospacedDigit()
+            Text("\(orderedIndex ?? 1).").font(m.bodyFont).monospacedDigit()
         case .task(let checked):
             Image(systemName: checked ? "checkmark.square.fill" : "square")
                 .foregroundStyle(checked ? Color.accentColor : Color.secondary)

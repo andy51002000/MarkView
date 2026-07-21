@@ -20,8 +20,11 @@ A fast, lightweight, **native macOS Markdown viewer** built with SwiftUI — no 
   - Standalone and inline images in paragraphs/table cells — contained local paths and remote HTTPS images load automatically; unsafe or missing images show a fallback
   - Horizontal rules
 - Manual reload with `⌘R` plus automatic refresh when the open file changes externally, including atomic saves
+- Browser-style zoom: `⌘+` / `⌘−` / `⌘0`, 50%–300% in 10% steps, with a toolbar control — pure display scaling (no re-parse), instant even on 100k-block files
 - Text selection enabled
 - Zero third-party dependencies (pure SwiftPM + SwiftUI)
+
+See the full [User Guide](docs/user-guide.md) for shortcuts and behavior details.
 
 ## Key metrics
 
