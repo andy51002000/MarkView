@@ -41,8 +41,10 @@ so the characters-per-line rhythm stays constant.
 - The committed zoom level applies app-wide and is remembered across launches.
 - Images are never upscaled beyond their natural size; only their surrounding
   spacing scales.
-- Zooming is a pure display setting — the document is not re-parsed, so even
-  100k-block files re-render instantly at the new size.
+- Zooming does not rebuild the parser output or inline-render cache. The
+  `LazyVStack` keeps non-visible chunks deferred, while visible chunks re-layout
+  at the new typography metrics. Apple Silicon testing showed no obvious stalls;
+  physical-trackpad feel, especially on older Intel Macs, depends on hardware.
 
 ## Auto-reload
 

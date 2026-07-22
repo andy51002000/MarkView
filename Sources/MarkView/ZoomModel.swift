@@ -60,12 +60,18 @@ final class ZoomModel: ObservableObject {
 
     func setScale(_ newValue: Double) {
         let final = Self.snap(newValue)
-        scale = final
+        let gestureIsActive = gestureBaseScale != nil
+
+        if final != scale {
+            scale = final
+        } else if !gestureIsActive {
+            return
+        }
         commit(final)
 
         // A toolbar or keyboard command during a pinch becomes the new base at
         // the gesture's current magnification, so later changes never jump back.
-        if gestureBaseScale != nil {
+        if gestureIsActive {
             gestureBaseScale = final
             gestureReferenceMagnification = latestMagnification
         }
@@ -116,7 +122,8 @@ final class ZoomModel: ObservableObject {
 
     static func snap(_ value: Double) -> Double {
         let clamped = clamp(value)
-        return clamp((clamped / step).rounded() * step)
+        let stepsPerUnit = 1.0 / step
+        return clamp((clamped * stepsPerUnit).rounded() / stepsPerUnit)
     }
 
     static func clamp(_ value: Double) -> Double {

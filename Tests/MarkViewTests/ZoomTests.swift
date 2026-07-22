@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import Testing
 @testable import MarkView
@@ -182,6 +183,44 @@ import Testing
 
         #expect(zoom.scale == 1.0)
         #expect(spy.values.isEmpty)
+    }
+
+    @Test func sameValueOutsideGestureDoesNotPublishOrPersist() {
+        let spy = PersistenceSpy()
+        let zoom = ZoomModel(initialScale: 1.0) { spy.values.append($0) }
+        var publishedChanges = 0
+        let observation = zoom.objectWillChange.sink { publishedChanges += 1 }
+        defer { observation.cancel() }
+
+        zoom.setScale(1.0)
+        zoom.reset()
+
+        #expect(zoom.scale == 1.0)
+        #expect(publishedChanges == 0)
+        #expect(spy.values.isEmpty)
+    }
+
+    @Test func sameValueDuringGestureRebasesWithoutPublishing() {
+        let spy = PersistenceSpy()
+        let zoom = ZoomModel(initialScale: 1.0) { spy.values.append($0) }
+
+        zoom.updateMagnification(1.5)
+        #expect(abs(zoom.scale - 1.5) < 0.0001)
+        var publishedChanges = 0
+        let observation = zoom.objectWillChange.sink { publishedChanges += 1 }
+        defer { observation.cancel() }
+
+        // 1.5 snaps to the current 1.5, but must still become the new gesture
+        // base at magnification 1.5 so subsequent movement is relative to it.
+        zoom.setScale(1.5)
+        #expect(publishedChanges == 0)
+        #expect(spy.values == [1.5])
+
+        zoom.updateMagnification(1.65)
+        #expect(abs(zoom.scale - 1.65) < 0.0001)
+        zoom.endMagnification()
+        #expect(abs(zoom.scale - 1.7) < 0.0001)
+        #expect(spy.values == [1.5, 1.7])
     }
 
     @Test func committedMagnificationRestoresAfterRelaunch() {

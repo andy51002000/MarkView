@@ -8,7 +8,7 @@ A fast, lightweight, **native macOS Markdown viewer** built with SwiftUI — no 
 
 ## Features
 
-- Native SwiftUI app (low memory footprint, instant launch)
+- Native SwiftUI app with a small installed footprint and fast startup
 - Open `.md`, `.markdown`, `.mdown`, `.txt` via toolbar button or `⌘O`
 - Read-only rendering of:
   - Headings (`#`–`######`)
@@ -31,7 +31,7 @@ See the full [User Guide](docs/user-guide.md) for shortcuts and behavior details
 | Metric | Value |
 |--------|-------|
 | Installed app size | ~1.2 MB (executable ~660 KB) |
-| Parse time (5 MB / 115k-block document) | ~0.4 s (background, UI never freezes) |
+| Parse time (5 MB / 115k-block document) | ~0.4 s on the tested Apple Silicon Mac (background task) |
 | Third-party dependencies | 0 (pure SwiftPM + SwiftUI) |
 | License | MIT (free) |
 | Minimum macOS | 13 (Ventura), Intel & Apple Silicon |

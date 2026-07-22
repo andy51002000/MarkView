@@ -118,6 +118,8 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity, alignment: .center)
             }
             .simultaneousGesture(magnificationGesture)
+            // Keep the single-closure overload: the two-parameter replacement
+            // requires macOS 14, while MarkView supports macOS 13.
             .onChange(of: magnificationIsActive) { active in
                 guard !active, zoom.isMagnifying else { return }
                 Task { @MainActor in
