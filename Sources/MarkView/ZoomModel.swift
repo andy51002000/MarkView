@@ -17,12 +17,25 @@ final class ZoomModel: ObservableObject {
 
     @Published private(set) var scale: Double
 
-    private let defaults: UserDefaults
+    private let persistScale: (Double) -> Void
+    private var committedScale: Double
+    private var gestureBaseScale: Double?
+    private var gestureReferenceMagnification = 1.0
+    private var latestMagnification = 1.0
 
     init(defaults: UserDefaults = .standard) {
-        self.defaults = defaults
         let stored = defaults.double(forKey: Self.defaultsKey)
-        self.scale = stored == 0 ? Self.defaultScale : Self.clamp(stored)
+        let initial = stored == 0 ? Self.defaultScale : Self.clamp(stored)
+        self.scale = initial
+        self.committedScale = initial
+        self.persistScale = { defaults.set($0, forKey: Self.defaultsKey) }
+    }
+
+    init(initialScale: Double, persistScale: @escaping (Double) -> Void) {
+        let initial = Self.clamp(initialScale)
+        self.scale = initial
+        self.committedScale = initial
+        self.persistScale = persistScale
     }
 
     var percentText: String {
@@ -31,6 +44,7 @@ final class ZoomModel: ObservableObject {
 
     var canZoomIn: Bool { scale < Self.maxScale - 0.0001 }
     var canZoomOut: Bool { scale > Self.minScale + 0.0001 }
+    var isMagnifying: Bool { gestureBaseScale != nil }
 
     func zoomIn() {
         setScale(scale + Self.step)
@@ -45,14 +59,64 @@ final class ZoomModel: ObservableObject {
     }
 
     func setScale(_ newValue: Double) {
-        // Snap to the step grid so repeated +/- never accumulates float dust
-        // (0.30000000000000004%-style artifacts in the label).
-        let clamped = Self.clamp(newValue)
-        let snapped = (clamped / Self.step).rounded() * Self.step
-        let final = Self.clamp(snapped)
-        guard final != scale else { return }
+        let final = Self.snap(newValue)
         scale = final
-        defaults.set(final, forKey: Self.defaultsKey)
+        commit(final)
+
+        // A toolbar or keyboard command during a pinch becomes the new base at
+        // the gesture's current magnification, so later changes never jump back.
+        if gestureBaseScale != nil {
+            gestureBaseScale = final
+            gestureReferenceMagnification = latestMagnification
+        }
+    }
+
+    func beginMagnification() {
+        guard gestureBaseScale == nil else { return }
+        gestureBaseScale = scale
+        gestureReferenceMagnification = 1.0
+        latestMagnification = 1.0
+    }
+
+    func updateMagnification(_ magnification: Double) {
+        guard magnification.isFinite, magnification > 0 else { return }
+        if gestureBaseScale == nil { beginMagnification() }
+        latestMagnification = magnification
+        guard let base = gestureBaseScale else { return }
+        let relative = magnification / gestureReferenceMagnification
+        scale = Self.clamp(base * relative)
+    }
+
+    func endMagnification(_ magnification: Double? = nil) {
+        guard gestureBaseScale != nil else { return }
+        if let magnification { updateMagnification(magnification) }
+        let final = Self.snap(scale)
+        scale = final
+        clearGesture()
+        commit(final)
+    }
+
+    func cancelMagnification() {
+        guard gestureBaseScale != nil else { return }
+        scale = committedScale
+        clearGesture()
+    }
+
+    private func commit(_ value: Double) {
+        guard abs(value - committedScale) > 0.0001 else { return }
+        committedScale = value
+        persistScale(value)
+    }
+
+    private func clearGesture() {
+        gestureBaseScale = nil
+        gestureReferenceMagnification = 1.0
+        latestMagnification = 1.0
+    }
+
+    static func snap(_ value: Double) -> Double {
+        let clamped = clamp(value)
+        return clamp((clamped / step).rounded() * step)
     }
 
     static func clamp(_ value: Double) -> Double {

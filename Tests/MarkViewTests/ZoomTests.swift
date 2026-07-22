@@ -4,6 +4,10 @@ import Testing
 
 @Suite @MainActor struct ZoomModelTests {
 
+    private final class PersistenceSpy {
+        var values: [Double] = []
+    }
+
     private func freshModel() -> ZoomModel {
         let defaults = UserDefaults(suiteName: "zoom-tests-\(UUID().uuidString)")!
         defaults.removePersistentDomain(forName: "zoom-tests")
@@ -76,6 +80,123 @@ import Testing
         #expect(zoom.scale == ZoomModel.maxScale)
         defaults.removePersistentDomain(forName: suite)
     }
+
+    @Test func magnificationUpdatesContinuouslyAndPersistsOnlyOnEnd() {
+        let spy = PersistenceSpy()
+        let zoom = ZoomModel(initialScale: 1.0) { spy.values.append($0) }
+
+        zoom.beginMagnification()
+        zoom.updateMagnification(1.137)
+        #expect(abs(zoom.scale - 1.137) < 0.0001)
+        #expect(zoom.percentText == "114%")
+        #expect(spy.values.isEmpty)
+
+        zoom.updateMagnification(1.264)
+        #expect(abs(zoom.scale - 1.264) < 0.0001)
+        #expect(spy.values.isEmpty)
+
+        zoom.endMagnification()
+        #expect(abs(zoom.scale - 1.3) < 0.0001)
+        #expect(spy.values == [1.3])
+        #expect(!zoom.isMagnifying)
+    }
+
+    @Test func magnificationClampsAtBoundsWithoutDrift() {
+        let spy = PersistenceSpy()
+        let zoom = ZoomModel(initialScale: 1.0) { spy.values.append($0) }
+
+        zoom.updateMagnification(10)
+        #expect(zoom.scale == ZoomModel.maxScale)
+        zoom.endMagnification()
+        #expect(zoom.scale == ZoomModel.maxScale)
+
+        zoom.updateMagnification(0.01)
+        #expect(zoom.scale == ZoomModel.minScale)
+        zoom.endMagnification()
+        #expect(zoom.scale == ZoomModel.minScale)
+
+        for _ in 0..<20 {
+            zoom.updateMagnification(1.04)
+            zoom.endMagnification()
+        }
+        #expect(zoom.scale == ZoomModel.minScale)
+        #expect(spy.values == [ZoomModel.maxScale, ZoomModel.minScale])
+    }
+
+    @Test func cancelledMagnificationRestoresCommittedScaleWithoutPersisting() {
+        let spy = PersistenceSpy()
+        let zoom = ZoomModel(initialScale: 1.2) { spy.values.append($0) }
+
+        zoom.updateMagnification(1.75)
+        #expect(abs(zoom.scale - 2.1) < 0.0001)
+        zoom.cancelMagnification()
+
+        #expect(abs(zoom.scale - 1.2) < 0.0001)
+        #expect(spy.values.isEmpty)
+        #expect(!zoom.isMagnifying)
+    }
+
+    @Test func keyboardStepDuringGestureRebasesWithoutJumpingBack() {
+        let spy = PersistenceSpy()
+        let zoom = ZoomModel(initialScale: 1.0) { spy.values.append($0) }
+
+        zoom.updateMagnification(1.5)
+        #expect(abs(zoom.scale - 1.5) < 0.0001)
+        zoom.zoomIn()
+        #expect(abs(zoom.scale - 1.6) < 0.0001)
+        #expect(spy.values == [1.6])
+
+        zoom.updateMagnification(1.65)
+        #expect(abs(zoom.scale - 1.76) < 0.0001)
+        zoom.endMagnification()
+        #expect(abs(zoom.scale - 1.8) < 0.0001)
+        #expect(spy.values == [1.6, 1.8])
+    }
+
+    @Test func resetDuringGestureBecomesNewBase() {
+        let spy = PersistenceSpy()
+        let zoom = ZoomModel(initialScale: 1.4) { spy.values.append($0) }
+
+        zoom.updateMagnification(1.5)
+        zoom.reset()
+        #expect(zoom.scale == 1.0)
+        #expect(spy.values == [1.0])
+
+        // Same magnification value after reset must stay at the reset scale.
+        zoom.updateMagnification(1.5)
+        #expect(zoom.scale == 1.0)
+        zoom.updateMagnification(1.65)
+        #expect(abs(zoom.scale - 1.1) < 0.0001)
+        zoom.endMagnification()
+
+        #expect(abs(zoom.scale - 1.1) < 0.0001)
+        #expect(spy.values == [1.0, 1.1])
+    }
+
+    @Test func endingAtCommittedGridPointDoesNotWriteAgain() {
+        let spy = PersistenceSpy()
+        let zoom = ZoomModel(initialScale: 1.0) { spy.values.append($0) }
+
+        zoom.updateMagnification(1.04)
+        zoom.endMagnification()
+
+        #expect(zoom.scale == 1.0)
+        #expect(spy.values.isEmpty)
+    }
+
+    @Test func committedMagnificationRestoresAfterRelaunch() {
+        let suite = "zoom-tests-pinch-restore-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        let zoom = ZoomModel(defaults: defaults)
+
+        zoom.updateMagnification(1.74)
+        zoom.endMagnification()
+        let restored = ZoomModel(defaults: defaults)
+
+        #expect(abs(zoom.scale - 1.7) < 0.0001)
+        #expect(abs(restored.scale - 1.7) < 0.0001)
+        defaults.removePersistentDomain(forName: suite)
+    }
 }
 
 @Suite struct ReadingMetricsTests {
@@ -143,7 +264,7 @@ import Testing
     // identity / cache contents. Parsing the same document before and
     // after computing metrics yields identical IDs, and the inline cache
     // is untouched by metric computation (it has no font dependency).
-    @Test func zoomHasNoParserOrCacheSideEffects() throws {
+    @Test @MainActor func zoomHasNoParserOrCacheSideEffects() throws {
         let doc = """
         # Title
 
@@ -159,16 +280,26 @@ import Testing
         let before = MarkdownParser.parse(doc)
         let cacheBefore = try InlineRenderCache.build(for: before)
 
-        // Simulate a zoom burst: compute many scaled metric sets.
-        for z in stride(from: 0.5, through: 3.0, by: 0.1) {
-            _ = ReadingTypography.metrics(zoom: z)
+        // Simulate 10 trackpad sessions with continuous unsnapped updates.
+        let zoom = ZoomModel(initialScale: 1.0) { _ in }
+        for session in 0..<10 {
+            let direction = session.isMultiple(of: 2) ? 1.0 : -1.0
+            for frame in 0..<24 {
+                let magnification = 1.0 + direction * Double(frame) * 0.008
+                zoom.updateMagnification(magnification)
+                _ = ReadingTypography.metrics(zoom: zoom.scale)
+            }
+            zoom.endMagnification()
         }
 
         let after = MarkdownParser.parse(doc)
         let cacheAfter = try InlineRenderCache.build(for: after)
 
+        #expect(before.count == after.count)
         #expect(before.map(\.id) == after.map(\.id),
                 "Block ID sequence must be identical across zoom changes")
+        #expect(makeBlockChunks(before).map(\.id) == makeBlockChunks(after).map(\.id),
+                "64-block LazyVStack chunking must be unaffected by zoom")
         // Cache coverage identical: same inline strings cached, same values.
         for text in ["Title", "Body with **bold** and `code`.",
                      "item one", "item two", "A", "1"] {

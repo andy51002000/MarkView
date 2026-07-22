@@ -27,10 +27,18 @@ MarkView zooms like a browser: text, headings, code, tables, list markers,
 and all spacing scale together, and the reading column widens proportionally
 so the characters-per-line rhythm stays constant.
 
-- Range: **50% – 300%** in 10% steps.
+- Range: **50% – 300%**.
+- Trackpad: pinch with two fingers over the Markdown content. The preview and
+  percentage update continuously while pinching; releasing snaps to the nearest
+  10% and saves that level. If macOS cancels the gesture, MarkView returns to
+  the last committed level without writing a preference. Two-finger scrolling
+  continues to work normally.
+- The gesture is content-only: pinching over the toolbar does not zoom.
 - Controls: the **− / percentage / +** control in the toolbar (click the
   percentage to reset to 100%), or the shortcuts above (also in the View menu).
-- The zoom level applies app-wide and is remembered across launches.
+  Toolbar and keyboard changes use 10% steps and take effect immediately, even
+  during a pinch, without jumping back when the gesture ends.
+- The committed zoom level applies app-wide and is remembered across launches.
 - Images are never upscaled beyond their natural size; only their surrounding
   spacing scales.
 - Zooming is a pure display setting — the document is not re-parsed, so even
@@ -52,9 +60,9 @@ scroll position for unchanged content. ⌘R forces a reload at any time.
 
 After running `install.sh`, select any `.md` file in Finder and press
 **Space** to see rendered Markdown without launching the app. Quick Look
-previews use a fixed, systemwide-readable text size — they intentionally do
-**not** follow the app's zoom preference, since Quick Look panels are sized
-by the system and shared across apps.
+previews use a fixed **100%** system-readable text size — they intentionally do
+**not** follow the app's zoom preference or trackpad pinch gestures, since Quick
+Look panels are sized by the system and shared across apps.
 
 ## Security model
 

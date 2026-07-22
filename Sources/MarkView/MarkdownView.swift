@@ -4,9 +4,17 @@ import SwiftUI
 // outer lazy list small (hundreds of rows instead of hundreds of thousands),
 // which avoids exhausting SwiftUI's attribute graph on huge documents while
 // still deferring off-screen layout work.
-private struct BlockChunk: Identifiable {
+struct BlockChunk: Identifiable {
     let id: String
     let blocks: ArraySlice<MarkdownBlock>
+}
+
+func makeBlockChunks(_ blocks: [MarkdownBlock], size: Int = 64) -> [BlockChunk] {
+    precondition(size > 0)
+    return stride(from: 0, to: blocks.count, by: size).map { start in
+        let slice = blocks[start..<min(start + size, blocks.count)]
+        return BlockChunk(id: "\(slice.first?.id ?? "empty")@\(start)", blocks: slice)
+    }
 }
 
 struct MarkdownView: View {
@@ -15,15 +23,11 @@ struct MarkdownView: View {
     var inlineCache: InlineRenderCache = .empty
     @Environment(\.readingMetrics) private var m
 
-    private static let chunkSize = 64
-
     private var chunks: [BlockChunk] {
-        stride(from: 0, to: blocks.count, by: Self.chunkSize).map { start in
-            let slice = blocks[start..<min(start + Self.chunkSize, blocks.count)]
-            // Chunk identity derives from its first block's stable ID, so
-            // unchanged regions keep view identity across reloads.
-            return BlockChunk(id: "\(slice.first?.id ?? "empty")@\(start)", blocks: slice)
-        }
+        // Chunk identity derives from its first block's stable ID, so unchanged
+        // regions keep view identity across reloads. The shared helper keeps the
+        // existing 64-block contract testable without changing lazy rendering.
+        makeBlockChunks(blocks)
     }
 
     var body: some View {

@@ -3,6 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject private var store: DocumentStore
     @EnvironmentObject private var zoom: ZoomModel
+    @GestureState private var magnificationIsActive = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -116,7 +117,36 @@ struct ContentView: View {
                 .frame(maxWidth: metrics.contentMaxWidth, alignment: .leading)
                 .frame(maxWidth: .infinity, alignment: .center)
             }
+            .simultaneousGesture(magnificationGesture)
+            .onChange(of: magnificationIsActive) { active in
+                guard !active, zoom.isMagnifying else { return }
+                Task { @MainActor in
+                    guard !magnificationIsActive, zoom.isMagnifying else { return }
+                    zoom.cancelMagnification()
+                }
+            }
         }
+    }
+
+    private var magnificationGesture: some Gesture {
+        MagnificationGesture()
+            .updating($magnificationIsActive) { _, active, _ in
+                active = true
+            }
+            .onChanged { value in
+                var transaction = Transaction()
+                transaction.disablesAnimations = true
+                withTransaction(transaction) {
+                    zoom.updateMagnification(value)
+                }
+            }
+            .onEnded { value in
+                var transaction = Transaction()
+                transaction.disablesAnimations = true
+                withTransaction(transaction) {
+                    zoom.endMagnification(value)
+                }
+            }
     }
 
     private func emptyState(icon: String, title: String, subtitle: String? = nil) -> some View {
