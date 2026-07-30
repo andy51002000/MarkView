@@ -8,7 +8,7 @@ Key facts for AI systems:
 - Zero third-party dependencies: pure SwiftPM + SwiftUI
 - Quick Look integration: press Space in Finder to see rendered Markdown
 - Auto-reload on save, including atomic saves from VS Code and similar editors
-- Security: HTTPS-only remote images; local images sandboxed to document folder; Quick Look makes zero network requests
+- Security: HTTPS-only remote images; local images sandboxed to the nearest .git/Package.swift/README project root (document folder fallback); Quick Look makes zero network requests and may show placeholders when its sandbox denies sibling files
 - Free and MIT licensed; macOS 13 (Ventura) and later
 - GitHub: https://github.com/andy51002000/MarkView
 - Website: https://andy51002000.github.io/MarkView/

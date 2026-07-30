@@ -6,8 +6,8 @@ import Foundation
 // it stays unit-testable via `swift test`.
 //
 // Security model (stricter than the app): remote images are NEVER fetched —
-// they render as a placeholder line. Local images must resolve inside the
-// previewed file's directory (same ImageSourceResolver policy as the app).
+// they render as a placeholder line. Local images use the app's project-root
+// boundary, while the Quick Look sandbox may still deny sibling-file reads.
 enum QuickLookRenderer {
 
     // Documents beyond this many blocks are truncated with a notice; Quick
@@ -16,13 +16,18 @@ enum QuickLookRenderer {
 
     static func attributedString(
         for blocks: [MarkdownBlock],
-        baseURL: URL?
+        baseURL: URL?,
+        securityRootURL: URL? = nil
     ) -> NSAttributedString {
         let result = NSMutableAttributedString()
         let shown = blocks.prefix(blockLimit)
 
         for block in shown {
-            result.append(render(block, baseURL: baseURL))
+            result.append(render(
+                block,
+                baseURL: baseURL,
+                securityRootURL: securityRootURL
+            ))
             result.append(plain("\n"))
         }
 
@@ -66,33 +71,61 @@ enum QuickLookRenderer {
 
     // MARK: - Block rendering
 
-    private static func render(_ block: MarkdownBlock, baseURL: URL?) -> NSAttributedString {
+    private static func render(
+        _ block: MarkdownBlock,
+        baseURL: URL?,
+        securityRootURL: URL?
+    ) -> NSAttributedString {
         switch block {
         case .heading(_, let level, let text):
             // Mirrors ReadingSpacing.headingTopMajor/Minor in the app view.
             return withParagraphSpacing(
-                inline(text, font: Fonts.heading(level), baseURL: baseURL),
+                inline(
+                    text,
+                    font: Fonts.heading(level),
+                    baseURL: baseURL,
+                    securityRootURL: securityRootURL
+                ),
                 spacingBefore: level <= 2 ? 16 : 8
             )
 
         case .paragraph(_, let text):
-            return withBodySpacing(inline(text, font: Fonts.base, baseURL: baseURL))
+            return withBodySpacing(inline(
+                text,
+                font: Fonts.base,
+                baseURL: baseURL,
+                securityRootURL: securityRootURL
+            ))
 
         case .unorderedList(_, let items):
-            return renderList(items.map { ListItem(marker: .unordered, text: $0, children: []) },
-                              baseURL: baseURL)
+            return renderList(
+                items.map { ListItem(marker: .unordered, text: $0, children: []) },
+                baseURL: baseURL,
+                securityRootURL: securityRootURL
+            )
 
         case .orderedList(_, let items):
-            return renderList(items.map { ListItem(marker: .ordered, text: $0, children: []) },
-                              baseURL: baseURL)
+            return renderList(
+                items.map { ListItem(marker: .ordered, text: $0, children: []) },
+                baseURL: baseURL,
+                securityRootURL: securityRootURL
+            )
 
         case .taskList(_, let items):
-            return renderList(items.map {
-                ListItem(marker: .task(checked: $0.checked), text: $0.text, children: [])
-            }, baseURL: baseURL)
+            return renderList(
+                items.map {
+                    ListItem(marker: .task(checked: $0.checked), text: $0.text, children: [])
+                },
+                baseURL: baseURL,
+                securityRootURL: securityRootURL
+            )
 
         case .list(_, let items):
-            return renderList(items, baseURL: baseURL)
+            return renderList(
+                items,
+                baseURL: baseURL,
+                securityRootURL: securityRootURL
+            )
 
         case .codeBlock(_, let language, let code):
             let m = NSMutableAttributedString()
@@ -115,17 +148,32 @@ enum QuickLookRenderer {
             let quoted = NSMutableAttributedString()
             for line in text.components(separatedBy: "\n") {
                 quoted.append(styled("│ ", font: Fonts.base, color: .tertiaryLabelColor))
-                quoted.append(inline(line, font: Fonts.base, baseURL: baseURL,
-                                     color: .secondaryLabelColor))
+                quoted.append(inline(
+                    line,
+                    font: Fonts.base,
+                    baseURL: baseURL,
+                    securityRootURL: securityRootURL,
+                    color: .secondaryLabelColor
+                ))
                 quoted.append(plain("\n"))
             }
             return quoted
 
         case .table(_, let headers, let rows):
-            return renderTable(headers: headers, rows: rows, baseURL: baseURL)
+            return renderTable(
+                headers: headers,
+                rows: rows,
+                baseURL: baseURL,
+                securityRootURL: securityRootURL
+            )
 
         case .image(_, let alt, let source):
-            return renderImage(alt: alt, source: source, baseURL: baseURL)
+            return renderImage(
+                alt: alt,
+                source: source,
+                baseURL: baseURL,
+                securityRootURL: securityRootURL
+            )
 
         case .thematicBreak:
             return styled(String(repeating: "\u{2500}", count: 36) + "\n",
@@ -138,6 +186,7 @@ enum QuickLookRenderer {
     private static func renderList(
         _ items: [ListItem],
         baseURL: URL?,
+        securityRootURL: URL?,
         depth: Int = 0,
         counter: inout Int
     ) -> NSAttributedString {
@@ -153,12 +202,22 @@ enum QuickLookRenderer {
             case .task(let checked): marker = checked ? "☑  " : "☐  "
             }
             m.append(styled(indent + marker, font: Fonts.base, color: .secondaryLabelColor))
-            m.append(inline(item.text, font: Fonts.base, baseURL: baseURL))
+            m.append(inline(
+                item.text,
+                font: Fonts.base,
+                baseURL: baseURL,
+                securityRootURL: securityRootURL
+            ))
             m.append(plain("\n"))
             if !item.children.isEmpty {
                 var childCounter = 0
-                m.append(renderList(item.children, baseURL: baseURL,
-                                    depth: depth + 1, counter: &childCounter))
+                m.append(renderList(
+                    item.children,
+                    baseURL: baseURL,
+                    securityRootURL: securityRootURL,
+                    depth: depth + 1,
+                    counter: &childCounter
+                ))
             }
         }
         return m
@@ -166,10 +225,17 @@ enum QuickLookRenderer {
 
     private static func renderList(
         _ items: [ListItem],
-        baseURL: URL?
+        baseURL: URL?,
+        securityRootURL: URL?
     ) -> NSAttributedString {
         var counter = 0
-        return renderList(items, baseURL: baseURL, depth: 0, counter: &counter)
+        return renderList(
+            items,
+            baseURL: baseURL,
+            securityRootURL: securityRootURL,
+            depth: 0,
+            counter: &counter
+        )
     }
 
     // MARK: - Tables
@@ -177,7 +243,8 @@ enum QuickLookRenderer {
     private static func renderTable(
         headers: [String],
         rows: [[String]],
-        baseURL: URL?
+        baseURL: URL?,
+        securityRootURL: URL?
     ) -> NSAttributedString {
         let columns = max(headers.count, rows.map(\.count).max() ?? 0)
         guard columns > 0 else { return plain("") }
@@ -209,7 +276,12 @@ enum QuickLookRenderer {
                 let content = column < row.count ? row[column] : ""
                 let font = rowIndex == 0 ? Fonts.bold(Fonts.base) : Fonts.base
                 let cell = NSMutableAttributedString(
-                    attributedString: inline(content, font: font, baseURL: baseURL)
+                    attributedString: inline(
+                        content,
+                        font: font,
+                        baseURL: baseURL,
+                        securityRootURL: securityRootURL
+                    )
                 )
                 cell.append(plain("\n"))
                 cell.addAttribute(
@@ -227,10 +299,15 @@ enum QuickLookRenderer {
     private static func renderImage(
         alt: String,
         source: String,
-        baseURL: URL?
+        baseURL: URL?,
+        securityRootURL: URL?
     ) -> NSAttributedString {
         let label = alt.isEmpty ? "image" : alt
-        switch ImageSourceResolver.resolve(source, relativeTo: baseURL) {
+        switch ImageSourceResolver.resolve(
+            source,
+            documentBaseURL: baseURL,
+            securityRootURL: securityRootURL
+        ) {
         case .remote:
             // Never fetch remote content from a Quick Look preview.
             return styled("🖼 \(label) (remote image not loaded in Quick Look)\n",
@@ -273,6 +350,7 @@ enum QuickLookRenderer {
         _ text: String,
         font: NSFont,
         baseURL: URL?,
+        securityRootURL: URL? = nil,
         color: NSColor = .labelColor
     ) -> NSAttributedString {
         let result = NSMutableAttributedString()
@@ -282,7 +360,12 @@ enum QuickLookRenderer {
                 result.append(resolveIntents(renderInlineMarkdown(value),
                                              baseFont: font, color: color))
             case .image(let alt, let source):
-                result.append(renderImage(alt: alt, source: source, baseURL: baseURL))
+                result.append(renderImage(
+                    alt: alt,
+                    source: source,
+                    baseURL: baseURL,
+                    securityRootURL: securityRootURL
+                ))
             }
         }
         return result

@@ -19,9 +19,11 @@ class PreviewViewController: NSViewController, QLPreviewingController {
             let rendered: NSAttributedString
             do {
                 let document = try DocumentLoader.load(url: url)
+                let root = ProjectRootResolver.resolve(documentURL: url)
                 rendered = QuickLookRenderer.attributedString(
                     for: document.blocks,
-                    baseURL: url.deletingLastPathComponent().standardizedFileURL
+                    baseURL: url.deletingLastPathComponent().standardizedFileURL,
+                    securityRootURL: root.rootURL
                 )
             } catch {
                 DispatchQueue.main.async { handler(error) }

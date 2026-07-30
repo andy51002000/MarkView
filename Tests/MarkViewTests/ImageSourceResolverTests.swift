@@ -61,7 +61,7 @@ import Testing
         let result = ImageSourceResolver.resolve(
             "../outside/secret.png", relativeTo: baseURL)
         guard case .rejected = result else {
-            Issue.record("../ traversal outside the document directory must be rejected, got \(result)")
+            Issue.record("../ traversal outside the security root must be rejected, got \(result)")
             return
         }
     }
@@ -70,7 +70,7 @@ import Testing
         let result = ImageSourceResolver.resolve(
             "assets/../../secret.png", relativeTo: baseURL)
         guard case .rejected = result else {
-            Issue.record("Traversal that resolves outside the base must be rejected, got \(result)")
+            Issue.record("Traversal that resolves outside the security root must be rejected, got \(result)")
             return
         }
     }

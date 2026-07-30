@@ -257,6 +257,7 @@ private func isEscaped(_ index: String.Index, in text: String) -> Bool {
 struct InlineContentView: View {
     let content: String
     let baseURL: URL?
+    let securityRootURL: URL?
     var inlineCache: InlineRenderCache = .empty
 
     var body: some View {
@@ -271,6 +272,7 @@ struct InlineContentView: View {
                         alt: alt,
                         source: source,
                         baseURL: baseURL,
+                        securityRootURL: securityRootURL,
                         maximumHeight: 200
                     )
                 }
@@ -285,6 +287,7 @@ struct TableBlockView: View {
     let headers: [String]
     let rows: [[String]]
     var baseURL: URL? = nil
+    var securityRootURL: URL? = nil
     var inlineCache: InlineRenderCache = .empty
     @Environment(\.readingMetrics) private var m
 
@@ -340,7 +343,12 @@ struct TableBlockView: View {
     }
 
     private func cell(_ content: String) -> some View {
-        InlineContentView(content: content, baseURL: baseURL, inlineCache: inlineCache)
+        InlineContentView(
+            content: content,
+            baseURL: baseURL,
+            securityRootURL: securityRootURL,
+            inlineCache: inlineCache
+        )
             .font(m.bodyFont)
             .padding(.horizontal, 10)
             .textSelection(.enabled)
@@ -358,7 +366,8 @@ enum ImageSourceResolution: Equatable {
 enum ImageSourceResolver {
     static func resolve(
         _ source: String,
-        relativeTo baseURL: URL?
+        documentBaseURL: URL?,
+        securityRootURL: URL?
     ) -> ImageSourceResolution {
         let trimmed = source.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
@@ -381,20 +390,44 @@ enum ImageSourceResolver {
         guard !trimmed.hasPrefix("/"), !trimmed.hasPrefix("\\") else {
             return .rejected("Absolute image paths are not allowed")
         }
-        guard let baseURL else {
+        guard let documentBaseURL else {
             return .rejected("Local image has no document directory")
         }
 
-        let base = baseURL.standardizedFileURL.resolvingSymlinksInPath()
-        let candidate = base
-            .appendingPathComponent(trimmed)
-            .standardizedFileURL
-            .resolvingSymlinksInPath()
-        let basePath = base.path.hasSuffix("/") ? base.path : base.path + "/"
-        guard candidate.path.hasPrefix(basePath) else {
-            return .rejected("Local image path escapes the document directory")
+        let root = ProjectRootResolver.canonical(securityRootURL ?? documentBaseURL)
+        let localPath = stripQueryAndFragment(from: trimmed)
+        guard let decodedPath = localPath.removingPercentEncoding,
+              !decodedPath.isEmpty else {
+            return .rejected("Invalid local image path")
+        }
+        guard !decodedPath.hasPrefix("/"), !decodedPath.hasPrefix("\\") else {
+            return .rejected("Absolute image paths are not allowed")
+        }
+
+        let candidate = ProjectRootResolver.canonical(
+            ProjectRootResolver.canonical(documentBaseURL)
+                .appendingPathComponent(decodedPath)
+        )
+        guard ProjectRootResolver.containsCanonical(candidate, in: root) else {
+            return .rejected("Local image path escapes the project root directory")
         }
         return .local(candidate)
+    }
+
+    // Compatibility helper for callers without a separately detected project
+    // root. It preserves the original document-directory boundary.
+    static func resolve(
+        _ source: String,
+        relativeTo baseURL: URL?
+    ) -> ImageSourceResolution {
+        resolve(source, documentBaseURL: baseURL, securityRootURL: baseURL)
+    }
+
+    private static func stripQueryAndFragment(from source: String) -> String {
+        let query = source.firstIndex(of: "?")
+        let fragment = source.firstIndex(of: "#")
+        let end = [query, fragment].compactMap { $0 }.min() ?? source.endIndex
+        return String(source[..<end])
     }
 }
 
@@ -402,6 +435,7 @@ struct ImageBlockView: View {
     let alt: String
     let source: String
     let baseURL: URL?
+    var securityRootURL: URL? = nil
     var maximumHeight: CGFloat? = nil
 
     var body: some View {
@@ -417,7 +451,11 @@ struct ImageBlockView: View {
 
     @ViewBuilder
     private var imageContent: some View {
-        switch ImageSourceResolver.resolve(source, relativeTo: baseURL) {
+        switch ImageSourceResolver.resolve(
+            source,
+            documentBaseURL: baseURL,
+            securityRootURL: securityRootURL
+        ) {
         case .local(let url):
             if let nsImage = NSImage(contentsOf: url) {
                 Image(nsImage: nsImage)

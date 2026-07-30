@@ -4,6 +4,12 @@ import Testing
 
 @Suite struct QuickLookRenderingTests {
 
+    private var onePixelPNG: Data {
+        Data(base64Encoded:
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+        )!
+    }
+
     private func render(_ markdown: String, baseURL: URL? = nil) -> NSAttributedString {
         QuickLookRenderer.attributedString(
             for: MarkdownParser.parse(markdown),
@@ -103,6 +109,64 @@ import Testing
         }
         #expect(!hasAttachment, "Path-escaping local images must not be loaded")
         #expect(output.string.contains("escape"))
+    }
+
+    @Test func siblingProjectImageRendersForStandaloneAndInline() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ql-project-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let blog = root.appendingPathComponent("blog", isDirectory: true)
+        let assets = root.appendingPathComponent("assets", isDirectory: true)
+        try FileManager.default.createDirectory(at: blog, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: assets, withIntermediateDirectories: true)
+        let imageURL = assets.appendingPathComponent("pixel.png")
+        try onePixelPNG.write(to: imageURL)
+
+        for markdown in [
+            "![standalone](../assets/pixel.png)",
+            "before ![inline](../assets/pixel.png) after"
+        ] {
+            let output = QuickLookRenderer.attributedString(
+                for: MarkdownParser.parse(markdown),
+                baseURL: blog,
+                securityRootURL: root
+            )
+            var attachmentCount = 0
+            output.enumerateAttribute(
+                .attachment, in: NSRange(location: 0, length: output.length)
+            ) { value, _, _ in
+                if value != nil { attachmentCount += 1 }
+            }
+            #expect(attachmentCount == 1, "Expected one image attachment for \(markdown)")
+        }
+    }
+
+    @Test func missingOrNonImageLocalFileShowsPlaceholder() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ql-placeholder-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        try "not an image".write(
+            to: root.appendingPathComponent("notes.txt"),
+            atomically: true,
+            encoding: .utf8
+        )
+
+        for source in ["missing.png", "notes.txt"] {
+            let output = QuickLookRenderer.attributedString(
+                for: MarkdownParser.parse("![asset](\(source))"),
+                baseURL: root,
+                securityRootURL: root
+            )
+            #expect(output.string.contains("cannot load"))
+            var hasAttachment = false
+            output.enumerateAttribute(
+                .attachment, in: NSRange(location: 0, length: output.length)
+            ) { value, _, _ in
+                if value != nil { hasAttachment = true }
+            }
+            #expect(!hasAttachment)
+        }
     }
 
     @Test func hugeDocumentIsTruncatedWithNotice() throws {

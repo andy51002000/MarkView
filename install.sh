@@ -22,6 +22,7 @@ QL_SOURCES=(
     "$PROJECT_DIR/QuickLookExtension/PreviewViewController.swift"
     "$PROJECT_DIR/Sources/MarkView/MarkdownParser.swift"
     "$PROJECT_DIR/Sources/MarkView/DocumentLoader.swift"
+    "$PROJECT_DIR/Sources/MarkView/ProjectRootResolver.swift"
     "$PROJECT_DIR/Sources/MarkView/BlockViews.swift"
     "$PROJECT_DIR/Sources/MarkView/QuickLookRendering.swift"
     "$PROJECT_DIR/Sources/MarkView/ReadingTypography.swift"

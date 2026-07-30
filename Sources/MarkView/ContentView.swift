@@ -109,6 +109,7 @@ struct ContentView: View {
                 MarkdownView(
                     blocks: store.blocks,
                     baseURL: store.baseURL,
+                    securityRootURL: store.securityRootURL,
                     inlineCache: store.inlineCache
                 )
                 .environment(\.readingMetrics, metrics)

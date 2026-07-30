@@ -20,6 +20,7 @@ func makeBlockChunks(_ blocks: [MarkdownBlock], size: Int = 64) -> [BlockChunk] 
 struct MarkdownView: View {
     let blocks: [MarkdownBlock]
     var baseURL: URL? = nil
+    var securityRootURL: URL? = nil
     var inlineCache: InlineRenderCache = .empty
     @Environment(\.readingMetrics) private var m
 
@@ -57,7 +58,12 @@ struct MarkdownView: View {
                 .padding(.top, level <= 2 ? m.headingTopMajor : m.headingTopMinor)
 
         case .paragraph(_, let text):
-            InlineContentView(content: text, baseURL: baseURL, inlineCache: inlineCache)
+            InlineContentView(
+                content: text,
+                baseURL: baseURL,
+                securityRootURL: securityRootURL,
+                inlineCache: inlineCache
+            )
                 .font(m.bodyFont)
                 .lineSpacing(m.line)
 
@@ -133,11 +139,17 @@ struct MarkdownView: View {
                 headers: headers,
                 rows: rows,
                 baseURL: baseURL,
+                securityRootURL: securityRootURL,
                 inlineCache: inlineCache
             )
 
         case .image(_, let alt, let source):
-            ImageBlockView(alt: alt, source: source, baseURL: baseURL)
+            ImageBlockView(
+                alt: alt,
+                source: source,
+                baseURL: baseURL,
+                securityRootURL: securityRootURL
+            )
 
         case .thematicBreak:
             Divider()

@@ -10,6 +10,8 @@ final class DocumentStore: ObservableObject {
     @Published var fileName: String = ""
     @Published var errorMessage: String?
     @Published var baseURL: URL?
+    @Published var securityRootURL: URL?
+    @Published private(set) var projectRootResolution: ProjectRootResolution?
     @Published var fileURL: URL?
     @Published var blocks: [MarkdownBlock] = []
     @Published var inlineCache: InlineRenderCache = .empty
@@ -45,7 +47,11 @@ final class DocumentStore: ObservableObject {
             errorMessage = "Unsupported file type: .\(ext). Choose a .md or .markdown file."
             return
         }
-        loadDocument(at: url.standardizedFileURL, startWatchingOnSuccess: true)
+        let standardizedURL = url.standardizedFileURL
+        let resolution = ProjectRootResolver.resolve(documentURL: standardizedURL)
+        projectRootResolution = resolution
+        securityRootURL = resolution.rootURL
+        loadDocument(at: standardizedURL, startWatchingOnSuccess: true)
     }
 
     func reload() {
@@ -120,6 +126,8 @@ final class DocumentStore: ObservableObject {
         rawText = ""
         fileName = ""
         baseURL = nil
+        securityRootURL = nil
+        projectRootResolution = nil
         fileURL = nil
         blocks = []
         errorMessage = nil

@@ -82,7 +82,7 @@
     { "@type": "Question", "name": "Does MarkView require Xcode?",
       "acceptedAnswer": { "@type": "Answer", "text": "No. Swift Command Line Tools are sufficient — run xcode-select --install if you don't have them, then bash install.sh to build and install MarkView." } },
     { "@type": "Question", "name": "Is MarkView safe for opening untrusted Markdown files?",
-      "acceptedAnswer": { "@type": "Answer", "text": "MarkView isolates untrusted content: only HTTPS remote image URLs are fetched (plain HTTP and other schemes are rejected), local images are sandboxed to the opened file's directory with ../ traversal blocked, and Quick Look previews make zero network requests. MarkView is read-only and never modifies or executes your files." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "MarkView isolates untrusted content: only HTTPS remote image URLs are fetched (plain HTTP and other schemes are rejected), and local images are sandboxed to the nearest .git, Package.swift, or README.md project root, with the document folder used as fallback. Quick Look makes zero network requests and may show a placeholder when its sandbox denies sibling files. MarkView is read-only and never modifies or executes your files." } },
     { "@type": "Question", "name": "Does MarkView work with large Markdown files?",
       "acceptedAnswer": { "@type": "Answer", "text": "Yes. A 5 MB file with 115,000 blocks parses in approximately 0.4 seconds in the background. The UI remains scrollable and never freezes during parsing." } }
   ]
@@ -441,7 +441,7 @@ footer a { color: var(--fg-soft); }
     <h2>Opening a file shouldn't be a leap of faith.</h2>
     <ul class="sec-list">
       <li><b>HTTPS-only remote images</b><span>Plain http:// image URLs are never fetched. file:// and other schemes are always rejected.</span></li>
-      <li><b>Local images stay in the document folder</b><span>Absolute paths and ../ traversal that escape the opened file's directory are blocked — symlinks resolved before the check.</span></li>
+      <li><b>Local images stay in the project root</b><span>The nearest .git, Package.swift, or README.md parent defines the boundary; without one, the document folder is used. Absolute paths, escaping ../ traversal, and symlink escapes are blocked.</span></li>
       <li><b>Quick Look never touches the network</b><span>Pressing Space on an untrusted file fetches zero remote content; remote images show a placeholder instead.</span></li>
       <li><b>Read-only by design</b><span>MarkView is a viewer. It never modifies, executes, or phones home about your files.</span></li>
     </ul>
@@ -510,7 +510,7 @@ cd MarkView</code></pre>
       </details>
       <details>
         <summary><h3>Is MarkView safe for untrusted Markdown files?</h3></summary>
-        <p>MarkView isolates untrusted content: only HTTPS remote images are fetched (plain HTTP and other schemes rejected), local images are sandboxed to the document's directory with <code>../</code> traversal blocked, and Quick Look previews make zero network requests. Read-only by design.</p>
+        <p>MarkView isolates untrusted content: only HTTPS remote images are fetched, while local images are sandboxed to the nearest <code>.git</code>, <code>Package.swift</code>, or <code>README.md</code> project root (document-folder fallback). Escaping traversal and symlinks are blocked. Quick Look makes zero network requests and safely shows a placeholder if its sandbox denies a sibling image. Read-only by design.</p>
       </details>
       <details>
         <summary><h3>Does MarkView handle large Markdown files?</h3></summary>

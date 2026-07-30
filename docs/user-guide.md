@@ -68,9 +68,13 @@ Look panels are sized by the system and shared across apps.
 
 ## Security model
 
-- Remote images load only over HTTPS, and only after you click
-  **Load Remote Images** for the current document.
-- Local images must live inside the opened file's folder; paths that escape
-  it (absolute or `../`) are rejected.
-- Quick Look previews never make network requests.
+- Remote images load automatically over HTTPS. Plain HTTP, `file://`, and other
+  URL schemes are rejected.
+- Relative local images resolve from the document folder and may use sibling
+  project folders. The nearest parent containing `.git`, `Package.swift`, or
+  `README.md` is the security root; without a marker, the document folder is
+  used. Absolute paths, symlinks, and traversal outside that root are rejected.
+- Quick Look previews never make network requests and use the same project-root
+  rule. The macOS Quick Look sandbox may deny sibling-image access; in that case
+  the preview shows a safe placeholder instead of broadening permissions.
 - MarkView never modifies, executes, or transmits your files.

@@ -103,8 +103,9 @@ Quick Look previews follow a stricter security model than the app:
 - **Remote images are never fetched** in a preview (a placeholder line is
   shown instead), so pressing Space on an untrusted document contacts no
   network hosts.
-- Local images must live inside the previewed file's directory (same
-  path-escape rules as the app).
+- Local image paths use the same project-root boundary as the app. Quick Look's
+  macOS sandbox may still deny sibling-file access; when it does, MarkView shows
+  a safe placeholder instead of weakening the extension entitlements.
 - Very large documents are truncated in the preview with a notice; open the
   file in MarkView for the full render.
 
@@ -144,6 +145,7 @@ Sources/MarkView/
   ContentView.swift      # window layout, toolbar, empty states
   DocumentStore.swift    # file open, reload state, and monitoring lifecycle
   DocumentLoader.swift   # size-limited background-safe file loading
+  ProjectRootResolver.swift # nearest-marker image security boundary
   FileWatcher.swift      # debounced file and directory change monitoring
   MarkdownParser.swift   # dependency-free block parser
   MarkdownView.swift     # SwiftUI block renderer (uses AttributedString for inline)
@@ -163,16 +165,17 @@ Samples/SAMPLE.md        # demo document exercising all features
   contact image hosts referenced by that document.
 - **HTTPS only.** Plain `http://` image URLs are never loaded. `file://` and
   every other scheme are always rejected.
-- **Local images are sandboxed to the document folder.** Relative paths are
-  resolved against the opened file's directory; absolute paths and `../`
-  traversal that escapes that directory are rejected (symlinks are resolved
-  before the check).
+- **Local images are sandboxed to the project root.** Relative paths resolve
+  from the opened file's directory, while the nearest parent containing `.git`,
+  `Package.swift`, or `README.md` defines the security root. Without a marker,
+  MarkView falls back to the document directory. Absolute paths, symlinks, or
+  `../` traversal that escape the resolved root are rejected.
 
 ## Notes / limitations
 
 - The block parser intentionally targets common Markdown rather than the full CommonMark specification. Inline emphasis/links use SwiftUI's native `AttributedString(markdown:)`.
 - Tables use GitHub pipe syntax and require the `| --- |` separator row under the header.
-- Remote HTTPS images load automatically; HTTP is never loaded. Local images must use paths that remain inside the opened `.md` file's directory.
+- Remote HTTPS images load automatically; HTTP is never loaded. Local image paths must remain inside the detected project root (or the document directory when no marker exists).
 - To make a double-clickable `.app`, wrap the release binary in an app bundle (future enhancement); for the MVP, `swift run` is the fastest path.
 
 ## FAQ
@@ -190,7 +193,7 @@ Yes. Swift Command Line Tools are sufficient (`xcode-select --install`).
 Run `bash install.sh`. It builds and registers the Quick Look extension; pressing Space on a `.md` file in Finder then shows rendered Markdown.
 
 **Is it safe to open untrusted files?**
-MarkView is read-only and isolates untrusted content: HTTPS-only remote images, local images sandboxed to the document folder (`../` traversal blocked), and a Quick Look extension that makes zero network requests.
+MarkView is read-only and isolates untrusted content: HTTPS-only remote images, local images sandboxed to the nearest trusted project marker (`.git`, `Package.swift`, or `README.md`; otherwise the document folder), and a Quick Look extension that makes zero network requests.
 
 **Why is it only ~1 MB when Obsidian is ~213 MB?**
 MarkView renders with SwiftUI, which ships with macOS. Obsidian, Typora, and VS Code bundle a full Chromium/Electron runtime.
